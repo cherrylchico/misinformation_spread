@@ -1,12 +1,3 @@
-\newcommand{\bias}{\mathbf{bias}}
-\newcommand{\truth}{\mathbf{truth}}
-\newcommand{\m}{\mathbf{m}}
-\newcommand{\R}{\mathbf{R}}
-\newcommand{\agent}{\mathbf{i}}
-\newcommand{\belief}{\mathbf{belief}}
-\newcommand{\action}{\mathbf{action}}
-
-
 
 We study information diffusion in a social network environment similar to WhatsApp and Telegram, referred to here as WT platforms.
 These platforms provide a natural setting for our analysis, as they are structured around group 
@@ -68,7 +59,11 @@ message $m$ sent by agent $j$ is:
 \end{equation}
 where
 \begin{align}
-\widehat{\truth} &= \left\lfloor \phi \cdot \sigma + 0.5 \right\rfloor, \quad \widehat{\truth} \in \{0,1\}\\
+\widehat{\truth} &=
+    \begin{cases}
+        1, & \text{if } \phi \cdot \sigma \geq 0.5 \\
+        0, & \text{if } \phi \cdot \sigma < 0.5
+    \end{cases}, \\
 \phi(\bias_i, \bias_m) &= 1 - |\bias_i - \bias_m|, \quad \phi \in [0,1] \\
 \sigma(\R) &= \frac{1}{1 + e^{-\R}}, \quad \sigma \in \{0,1\}
 \end{align}
@@ -88,28 +83,26 @@ sharing ideologically aligned content, reputational gains if the message is true
 losses if it is false. Forwarding also carries a fixed cost, such as the effort or risk of 
 spreading misinformation. Ignoring yields no utility. Thus, the expected utility is:
 \begin{equation}
-\mathbb{E}[u_{ij}] =
+\mathbb{E}[u] =
 \begin{cases}
-\omega \phi_{ij}
-+ \gamma\belief_{ij}
-- \delta (1 - \belief_{ij})
-- k, & \text{if } \action = 1 \\
+\omega \phi
++ \gamma\belief
+- \delta (1 - \belief)
+- \cost, & \text{if } \action = 1 \\
 0, & \text{if } \action = 0.
 \end{cases}
 \end{equation}
 
-where $\omega$, $\gamma$ and $\delta$ are similarly modeled as the $\bias$ in Equation 2,
-$\omega + \gamma = 1$, $\omega + \delta = 1$ and $k \in [0,1]$
-
+where $\omega, \gamma, \delta \in [0,1]$ and $\cost > 0$.
 Here, $\omega$ represents the benefit from forwarding ideologically aligned messages, 
 $\gamma$ the reputational gain from forwarding a true message, 
 $\delta$ the reputational penalty from forwarding a false one, 
 and $k$ the fixed cost of forwarding. Because agents in WT groups often receive the same 
 message from multiple senders, the overall utility is the average across all sources:
 \[
-\mathbb{E}[u_{i}] = \frac{1}{|\S_i|} \sum_{j \in S_i} \mathbb{E}[u_{ij}],
+\mathbb{E}[u_{i}] = \frac{1}{\|S_i\|} \sum_{j \in S_i} \mathbb{E}[u_{ij}],
 \]
-where $\S_i$ is the set of senders from whom agent $i$ received the message at time $t$. 
+where $S_i$ is the set of senders from whom agent $i$ received the message at time $t$. 
 The agent forwards if $\mathbb{E}[u_i] \geq 0$.
 
 \subsubsection{Reputation Update}
@@ -122,11 +115,11 @@ when agents forward true messages and falls when they forward false ones. Formal
 
 \begin{equation}
 R_i^{t+1} = R_i^t 
-+ \eta \cdot \mathbf{1}\{a_i^t = 1 \land \theta_t = 1\}
-- \lambda \cdot \mathbf{1}\{a_i^t = 1 \land \theta_t = 0\}
++ \gamma \cdot \mathbf{1}\{\action_i^t = 1 \cap \truth_t = 1\}
+- \delta \cdot \mathbf{1}\{\action_i^t = 1 \cap \truth_t = 0\}
 \end{equation}
 
-where $\eta, \lambda > 0$ govern the strength of reputational gains and losses respectively. Reputation evolves only through the correctness of forwarding actions. Ignoring a message leaves reputation unchanged.
+ Reputation evolves only through the correctness of forwarding actions. Ignoring a message leaves reputation unchanged.
 
 \subsection{Social Network}
 Social networks on WT platforms are organized around 
