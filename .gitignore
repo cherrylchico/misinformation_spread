@@ -1,2 +1,4 @@
-# Ignore auxiliary files latex
-paper/aux_files/
+# Ignore all files in the paper/aux_files/ directory
+# except for main.pdf, which should be tracked by git
+paper/aux_files/*
+!paper/aux_files/main.pdf
