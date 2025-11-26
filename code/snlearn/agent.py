@@ -13,6 +13,7 @@ class Agent:
             reputation_reward_strength: float, 
             reputation_penalty_strength: float,
             forwarding_cost: float = 0.1,
+            agent_type: str = 'regular',
             ):
         
         #agent parameters
@@ -24,6 +25,7 @@ class Agent:
         self.reputation_reward_strength = reputation_reward_strength
         self.reputation_penalty_strength = reputation_penalty_strength
         self.forwarding_cost = forwarding_cost
+        self.agent_type = agent_type  # 'high_reputation' or 'low_reputation'
 
         #baseline attributes
         self.bias = self._sample_bias()

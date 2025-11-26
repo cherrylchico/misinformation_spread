@@ -4,62 +4,61 @@ from snlearn.agent import Agent
 import networkx as nx
 
 class SocialNetwork:
-    def __init__(self, num_agents, prob_in, prob_out, num_groups=2, seed=None):
+    def __init__(self, num_agents, prob_in=None, prob_out=None, num_groups=2, seed=None, m=2):
         self.num_agents = num_agents
-        self.prob_in = prob_in
-        self.prob_out = prob_out
+        self.prob_in = prob_in  # Not used for BA, kept for compatibility
+        self.prob_out = prob_out  # Not used for BA, kept for compatibility
         self.num_groups = num_groups
         self.seed = seed
-        self.adj_matrix, self.graph, self.group_assignments = self._generate_sbm()
+        self.m = m  # Number of edges to attach from a new node to existing nodes
+        self.adj_matrix, self.graph, self.group_assignments = self._generate_barabasi_albert()
 
-    def _generate_sbm(self):
-        """Gera uma rede usando Stochastic Block Model"""
+    def _generate_barabasi_albert(self):
+        """Generate a network using Barabási-Albert model"""
         if self.seed is not None:
             np.random.seed(self.seed)
         
-        # Divide agentes em grupos
-        sizes = []
-        remaining = self.num_agents
-        for i in range(self.num_groups - 1):
-            size = remaining // (self.num_groups - i)
-            sizes.append(size)
-            remaining -= size
-        sizes.append(remaining)
+        # Generate undirected Barabási-Albert graph
+        # Note: BA model is undirected, so we'll convert to directed
+        G_undirected = nx.barabasi_albert_graph(
+            n=self.num_agents,
+            m=self.m,
+            seed=self.seed
+        )
         
-        # Cria matriz de probabilidades
-        probs = np.full((self.num_groups, self.num_groups), self.prob_out)
-        np.fill_diagonal(probs, self.prob_in)
-        
-        # Gera grafo manualmente (mais compatível)
+        # Convert to directed graph (each edge becomes bidirectional)
         G = nx.DiGraph()
         G.add_nodes_from(range(self.num_agents))
         
-        # Atribui grupos aos agentes
-        group_assignments = []
-        node_idx = 0
-        for group_id, size in enumerate(sizes):
-            for _ in range(size):
-                group_assignments.append(group_id)
-                node_idx += 1
+        # Add edges: for each undirected edge, add both directions
+        for edge in G_undirected.edges():
+            G.add_edge(edge[0], edge[1])
+            G.add_edge(edge[1], edge[0])
         
-        # Adiciona arestas baseado nas probabilidades
-        for i in range(self.num_agents):
-            for j in range(self.num_agents):
-                if i != j:
-                    group_i = group_assignments[i]
-                    group_j = group_assignments[j]
-                    prob = probs[group_i, group_j]
-                    if np.random.random() < prob:
-                        G.add_edge(i, j)
-        
+        # Create adjacency matrix
         adj = nx.to_numpy_array(G, dtype=int)
+        
+        # Assign groups based on node degree (for visualization purposes)
+        # Higher degree nodes get different groups
+        degrees = [G.degree(node) for node in range(self.num_agents)]
+        sorted_nodes = sorted(range(self.num_agents), key=lambda x: degrees[x], reverse=True)
+        
+        group_assignments = [0] * self.num_agents
+        group_size = self.num_agents // self.num_groups
+        
+        for group_id in range(self.num_groups):
+            start_idx = group_id * group_size
+            end_idx = (group_id + 1) * group_size if group_id < self.num_groups - 1 else self.num_agents
+            for idx in range(start_idx, end_idx):
+                if idx < len(sorted_nodes):
+                    group_assignments[sorted_nodes[idx]] = group_id
         
         return adj, G, group_assignments
     
     def get_neighbors(self, agent_id):
-        """Retorna os vizinhos (destinos) de um agente"""
+        """Return the neighbors (destinations) of an agent"""
         return np.where(self.adj_matrix[agent_id] == 1)[0].tolist()
     
     def get_incoming(self, agent_id):
-        """Retorna os agentes que podem enviar mensagens para este agente"""
+        """Return the agents that can send messages to this agent"""
         return np.where(self.adj_matrix[:, agent_id] == 1)[0].tolist()

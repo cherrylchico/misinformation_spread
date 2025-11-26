@@ -1,58 +1,68 @@
-# Simulação de Difusão de Desinformação
+# Misinformation Diffusion Simulation
 
-Este código implementa o modelo de difusão de desinformação em redes sociais descrito no paper, com visualizações interativas.
+This code implements the misinformation diffusion model in social networks described in the paper, with interactive visualizations.
 
-## Instalação
+## Main Features
+
+- **Two types of agents**:
+  - **Influencers (high_reputation)**: Few agents (2-4) that care a lot about reputation. They are the ones who start the news.
+  - **Regular users (low_reputation)**: Majority of agents that don't care much about reputation (parameter 0.5).
+
+- **Visualizations**:
+  - Static graphs of the network and metrics
+  - **Animated GIF** showing diffusion round by round
+
+## Installation
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Uso Básico
+## Basic Usage
 
-Execute a simulação com os parâmetros padrão:
+Run the simulation with default parameters:
 
 ```bash
 python3 simulation.py
 ```
 
-Isso irá:
-1. Criar uma rede social com 20 agentes
-2. Executar 10 rounds de simulação
-3. Gerar visualizações da rede e métricas
+This will:
+1. Create a social network with 20 agents
+2. Run 10 simulation rounds
+3. Generate network and metrics visualizations
 
-## Modificando Parâmetros
+## Modifying Parameters
 
-### Opção 1: Editar diretamente no código
+### Option 1: Edit directly in code
 
-Abra `simulation.py` e modifique o dicionário `config` na função `main()`:
+Open `simulation.py` and modify the `config` dictionary in the `main()` function:
 
 ```python
 config = {
-    'num_agents': 20,           # Número de agentes (comece pequeno!)
-    'prob_in': 0.6,             # Probabilidade de conexão dentro do grupo
-    'prob_out': 0.1,            # Probabilidade de conexão entre grupos
-    'num_groups': 2,            # Número de grupos na rede
-    'message_left_bias': 2.0,   # Parâmetro alpha para bias de mensagens
-    'message_right_bias': 2.0,  # Parâmetro beta para bias de mensagens
-    'prob_truth': 0.5,          # Probabilidade de mensagem ser verdadeira
-    'agent_left_bias': 2.0,     # Parâmetro alpha para bias dos agentes
-    'agent_right_bias': 2.0,    # Parâmetro beta para bias dos agentes
-    'ave_reputation': 0.0,      # Média da reputação inicial
-    'variance_reputation': 1.0,  # Variância da reputação inicial
-    'bias_strength': 0.3,       # Peso do alinhamento ideológico (omega)
-    'reputation_reward_strength': 0.5,  # Ganho de reputação por verdade (gamma)
-    'reputation_penalty_strength': 0.5,  # Penalidade por desinformação (delta)
-    'forwarding_cost': 0.1,     # Custo de encaminhar (k)
-    'num_rounds': 10,           # Número de rounds
-    'initial_senders': [0],     # IDs dos agentes que recebem mensagem inicial
-    'seed': 42                  # Seed para reprodutibilidade
+    'num_agents': 20,           # Number of agents (start small!)
+    'prob_in': 0.6,             # Probability of connection within group
+    'prob_out': 0.1,            # Probability of connection between groups
+    'num_groups': 2,            # Number of groups in network
+    'message_left_bias': 2.0,   # Alpha parameter for message bias
+    'message_right_bias': 2.0,  # Beta parameter for message bias
+    'prob_truth': 0.5,          # Probability of message being true
+    'agent_left_bias': 2.0,     # Alpha parameter for agent bias
+    'agent_right_bias': 2.0,    # Beta parameter for agent bias
+    'ave_reputation': 0.0,      # Mean of initial reputation
+    'variance_reputation': 1.0,  # Variance of initial reputation
+    'bias_strength': 0.3,       # Weight of ideological alignment (omega)
+    'reputation_reward_strength': 0.5,  # Reputation gain for truth (gamma)
+    'reputation_penalty_strength': 0.5,  # Penalty for misinformation (delta)
+    'forwarding_cost': 0.1,     # Cost of forwarding (k)
+    'num_rounds': 10,           # Number of rounds
+    'initial_senders': [0],     # IDs of agents that receive initial message
+    'seed': 42                  # Seed for reproducibility
 }
 ```
 
-### Opção 2: Usar arquivo JSON
+### Option 2: Use JSON file
 
-Edite `config.json` e execute:
+Edit `config.json` and run:
 
 ```python
 from simulation import Simulation
@@ -62,67 +72,94 @@ sim.visualize_network(round_result=sim.run_round(0))
 sim.plot_metrics()
 ```
 
-## Parâmetros Importantes
+## Important Parameters
 
-### Rede
-- **num_agents**: Número de agentes na rede (recomendado: 10-50 para começar)
-- **prob_in**: Probabilidade de conexão dentro do mesmo grupo (0-1)
-- **prob_out**: Probabilidade de conexão entre grupos diferentes (0-1, deve ser < prob_in)
-- **num_groups**: Número de grupos na rede (recomendado: 2-4)
+### Network
+- **num_agents**: Number of agents in the network (recommended: 10-50 to start)
+- **ba_m**: Number of edges to attach from a new node to existing nodes in Barabási-Albert model (default: 2)
+- **num_groups**: Number of groups for visualization purposes (groups are assigned based on node degree)
+- **Note**: The network uses Barabási-Albert (scale-free) model. Parameters `prob_in` and `prob_out` are kept for compatibility but not used.
 
-### Mensagens
-- **prob_truth**: Probabilidade de uma mensagem ser verdadeira (0-1)
-- **message_left_bias / message_right_bias**: Parâmetros da distribuição Beta para o viés ideológico das mensagens
+### Messages
+- **prob_truth**: Probability of a message being true (0-1)
+- **message_left_bias / message_right_bias**: Beta distribution parameters for message ideological bias
 
-### Agentes
-- **bias_strength (ω)**: Quanto os agentes valorizam alinhamento ideológico
-- **reputation_reward_strength (γ)**: Ganho de reputação ao encaminhar mensagens verdadeiras
-- **reputation_penalty_strength (δ)**: Penalidade de reputação ao encaminhar mensagens falsas
-- **forwarding_cost (k)**: Custo fixo de encaminhar uma mensagem
+### Agents
 
-### Simulação
-- **num_rounds**: Número de rounds a executar
-- **initial_senders**: Lista de IDs dos agentes que recebem a mensagem inicialmente
+**High Reputation Type (Influencers)**:
+- **high_rep_count**: Number of influencers (2-4). These are the ones who start the news.
+- **high_rep_reward (γ)**: High reputation gain when forwarding true messages (default: 1.0)
+- **high_rep_penalty (δ)**: High penalty when forwarding false messages (default: 1.0)
 
-## Visualizações
+**Low Reputation Type (Regular Users)**:
+- **low_rep_reward (γ)**: Low reputation gain (default: 0.5)
+- **low_rep_penalty (δ)**: Low penalty (default: 0.5)
 
-A simulação gera dois arquivos:
+**Common Parameters**:
+- **bias_strength (ω)**: How much agents value ideological alignment
+- **forwarding_cost (k)**: Fixed cost of forwarding a message
 
-1. **network_diffusion.png**: Mostra a estrutura da rede e a difusão da mensagem no último round
-   - Cores diferentes indicam grupos
-   - Vermelho = encaminhou a mensagem
-   - Laranja = recebeu mas não encaminhou
-   - Cinza = não recebeu
+### Simulation
+- **num_rounds**: Number of rounds to execute
+- **Note**: The `initial_senders` are automatically the first `high_rep_count` agents (the influencers)
 
-2. **metrics.png**: Gráficos das métricas ao longo do tempo
-   - Alcance da mensagem
-   - Taxa de encaminhamento
-   - Contaminação por desinformação
-   - Reputação média
+## Visualizations
 
-## Estrutura do Código
+The simulation generates three files:
 
-- `simulation.py`: Arquivo principal com a classe Simulation
-- `snlearn/agent.py`: Implementação dos agentes
-- `snlearn/message.py`: Implementação das mensagens
-- `snlearn/socialnetwork.py`: Geração e gerenciamento da rede social
-- `config.json`: Arquivo de configuração opcional
+1. **network_diffusion.png**: Shows the network structure and message diffusion in the last round
+   - Larger blue nodes = Influencers (high_reputation)
+   - Smaller nodes = Regular users (low_reputation)
+   - Red = forwarded the message
+   - Orange = received but didn't forward
+   - Gray = didn't receive
 
-## Exemplo: Rede Pequena e Simples
+2. **metrics.png**: Graphs of metrics over time
+   - Message reach
+   - Forwarding rate
+   - Misinformation contamination
+   - Average reputation
 
-Para começar com uma rede muito simples:
+3. **diffusion_animation.gif**: Animated GIF showing diffusion in each round
+   - Each frame shows one round of the simulation
+   - Visualizes how the message spreads through the network over time
+   - Colors indicate the state of each agent (received, forwarded, etc.)
 
-```python
-config = {
-    'num_agents': 10,
-    'prob_in': 0.8,
-    'prob_out': 0.2,
-    'num_groups': 2,
-    'num_rounds': 5,
-    'initial_senders': [0, 1],
-    'seed': 42
+## Code Structure
+
+- `simulation.py`: Main file with the Simulation class
+- `snlearn/agent.py`: Agent implementation
+- `snlearn/message.py`: Message implementation
+- `snlearn/socialnetwork.py`: Social network generation and management
+- `config.json`: Optional configuration file
+
+## Example: Small and Simple Network
+
+To start with a very simple network:
+
+```json
+{
+  "num_agents": 20,
+  "num_groups": 2,
+  "ba_m": 2,
+  "high_rep_count": 2,
+  "high_rep_reward": 1.0,
+  "high_rep_penalty": 1.0,
+  "low_rep_reward": 0.5,
+  "low_rep_penalty": 0.5,
+  "num_rounds": 5,
+  "seed": 42
 }
 ```
 
-Isso cria uma rede pequena com 10 agentes, 2 grupos bem conectados, e executa apenas 5 rounds começando com 2 agentes iniciais.
+This creates a small Barabási-Albert network with 20 agents, 2 influencers who start the news, and runs only 5 rounds. The `ba_m` parameter controls how many connections each new node makes (higher values create denser networks).
 
+## Modifying the Number of Influencers
+
+To change how many influencers exist in the network, edit `high_rep_count` in `config.json`:
+
+```json
+"high_rep_count": 3  // Can be 2, 3, or 4
+```
+
+The first `high_rep_count` agents will be the influencers and will automatically start the messages.

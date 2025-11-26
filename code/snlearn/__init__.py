@@ -1,4 +1,4 @@
-"""Simulação de difusão de desinformação em redes sociais"""
+"""Misinformation diffusion simulation in social networks"""
 
 from .agent import Agent
 from .message import Message
