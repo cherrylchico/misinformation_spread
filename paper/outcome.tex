@@ -1,0 +1,71 @@
+
+To evaluate how misinformation propagates across different network structures and agent types, we record a series of outcome metrics at each round $t$ of the simulation. These measures are designed to capture both the \emph{extent} and the \emph{dynamics} of diffusion, including whether false messages remain contained within local communities or spread widely across the network.
+
+\subsection{Reach}
+
+We define the \textit{reach} of message $m_t$ as the fraction of agents who received the message through any chain of forwards:
+\[
+R_t = \frac{|\{ i : \text{agent } i \text{ received } m_t \}|}{N}.
+\]
+This metric captures how far a message travels across the network.
+
+\subsection{Forwarding Rate}
+
+Among those who received the message, we compute the \textit{forwarding rate}:
+\[
+F_t = \frac{\sum_{i: i \text{ received } m_t} a_{it}}{|\{ i : \text{received } m_t \}|},
+\]
+where $a_{it} \in \{0,1\}$ denotes agent $i$'s forwarding decision.  
+This measure reflects the behavioral response to the message in round $t$.
+
+\subsection{Misinformation Contamination}
+
+To track the spread of false messages, we compute the \textit{false-forward rate} when $\theta_t = 0$:
+\[
+FF_t = \frac{\sum_{i: i \text{ received } m_t} a_{it} \cdot \mathbf{1}\{\theta_t = 0\}}
+{|\{ i : \text{received } m_t \}|}.
+\]
+We also record cumulative contamination over time as the total number of agents ever exposed to false messages.
+
+\subsection{Velocity of Spread}
+
+The \textit{velocity} of diffusion is defined as the time required for a message to reach a given share of the population.  
+For a threshold $\tau \in (0,1)$, define:
+\[
+V_{\tau}(t) = \min \{ s \geq t : R_s \geq \tau \}.
+\]
+A lower $V_{\tau}$ indicates faster spread.
+
+\subsection{Community Containment versus Spillover}
+
+Each agent belongs to one or more communities in the overlapping group structure.  
+For each receiving agent $i$, let $\mathcal{C}(i)$ denote the set of communities to which $i$ belongs. We measure the degree of within-community concentration of diffusion through:
+\[
+C_t = \frac{1}{|\{ i : \text{received } m_t \}|}
+\sum_{i: \text{received } m_t}
+\mathbf{1}\{ \exists\, j \text{ sender with } 
+\mathcal{C}(i) \cap \mathcal{C}(j) \neq \emptyset \}.
+\]
+A high $C_t$ indicates that diffusion remains mostly inside local group ``bubbles,'' whereas a low $C_t$ indicates cross-community spillovers.
+
+\subsection{Reputation Dynamics}
+
+For each agent type $\tau$, we track the mean reputation over time:
+\[
+\bar{R}_{\tau}(t) =
+\frac{1}{|\{i : \tau(i) = \tau\}|}
+\sum_{i: \tau(i)=\tau} R_i^t.
+\]
+This allows us to study how exposure to true and false messages shapes the reputational distribution of influencers, regular users, and automated accounts.
+
+\subsection{Aggregation Across Rounds and Network Draws}
+
+For each metric $\{R_t, F_t, FF_t, C_t\}$, we compute:
+
+\begin{itemize}
+    \item \textbf{Round-level averages:} $\frac{1}{T}\sum_{t=1}^T X_t$.
+    \item \textbf{Cumulative measures:} e.g., cumulative false exposure.
+    \item \textbf{Comparative statics:} comparison across network structures (scale-free, small-world, overlapping SBM) and agent-type parameterizations.
+\end{itemize}
+
+These aggregated measures provide a comprehensive characterization of misinformation diffusion under different structural and behavioral assumptions.

@@ -1,0 +1,95 @@
+Here we define the data generating process for the construction of the social network, agents, and messages. We also describe the simulation procedure used to study misinformation diffusion within this environment.
+
+\subsection{Messages}
+Messages are generated according to their ideological slant and truthfulness. For each round $t$, a message $m_t$ is drawn as:
+\[
+m_t \sim (\beta_t, \theta_t), \qquad \beta_t \in [-1,1], \quad \theta_t \in \{0,1\}.
+\]  
+
+\subsection{Rounds}
+
+Each round proceeds as follows:
+\begin{enumerate}
+    \item A message $(m_t,\theta_t)$ appears.
+    \item Initial recipients observe the message and, if they choose to forward, neighbors receive it.
+    \item Upon receiving the message from sender $j$, each agent $i$ forms belief 
+    \[
+    \pi_{it} = \kappa_{ij}^t.
+    \]
+    \item Each agent decides whether to forward ($a_{it} = 1$) or ignore ($a_{it} = 0$).
+    \item The true state $\theta_t$ is revealed and agents’ reputations are updated.
+\end{enumerate}
+
+\subsection{Network Construction}
+We model the social network as a directed graph $G = (N, E)$, where $N$ is the set of agents (nodes) and $E$ is the set of directed edges representing communication ties (e.g., message forwarding). The network is generated using a stochastic block model to capture the clustered group structure typical of WT platforms. Formally, we partition agents into $K$ latent groups $\{G_1, G_2, \ldots, G_K\}$. The probability of a directed edge from agent $i$ to agent $j$ depends on their group memberships:
+\[
+\Pr((i,j)\in G) =
+\begin{cases}
+p_{\text{in}}, & \text{if } i,j \text{ share at least one group}, \\
+p_{\text{out}}, & \text{otherwise},
+\end{cases}
+\quad \text{with } p_{\text{in}} > p_{\text{out}} > 0.
+\]
+
+
+
+\subsection{Agent Types and Reputational Heterogeneity}
+
+Agents are partitioned into types $\tau \in \{\text{influencer},\text{regular},\text{bot}\}$. Each type differs in both network position and behavioral parameters.
+
+\begin{itemize}
+    \item \textbf{Influencers / political elites} have high expected public-layer degree and substantially larger reputational parameters $(\gamma_i, \delta_i)$. This assumption reflects evidence that public figures face stronger reputational incentives and backlash for spreading false content.
+    \item \textbf{Regular users} participate in several private groups and have moderate $(\gamma_i, \delta_i)$ values, reflecting social-image motives documented in \cite{talwar2020fake, vellani2024motives}.
+    \item \textbf{Bots or automated accounts} may have low reputation sensitivity and strategically chosen degree depending on the simulation goal.
+\end{itemize}
+
+\subsection{Rounds}
+
+Each round proceeds as follows:
+\begin{enumerate}
+    \item A message $(m_t,\theta_t)$ appears.
+    \item Initial recipients observe the message and, if they choose to forward, neighbors receive it.
+    \item Upon receiving the message from sender $j$, each agent $i$ forms belief 
+    \[
+    \pi_{it} = \kappa_{ij}^t.
+    \]
+    \item Each agent decides whether to forward ($a_{it} = 1$) or ignore ($a_{it} = 0$).
+    \item The true state $\theta_t$ is revealed and agents’ reputations are updated.
+\end{enumerate}
+
+\subsection{Ideological Bias Distribution}
+
+Each agent receives an ideological bias:
+\[
+b_i \sim p_L \cdot \mathcal{N}(-\mu, \sigma^2) + (1-p_L)\cdot \mathcal{N}(\mu, \sigma^2),
+\]
+capturing polarization and bimodality consistent with empirical ideological distributions in online environments.
+
+\subsection{Data-Generating Process (DGP) Justification}
+
+Our DGP draws on several empirical and theoretical frameworks:
+
+\begin{itemize}
+    \item \textbf{Influence heterogeneity and hub structure} follows \cite{aral2012influence}, showing that a minority of high-degree nodes disproportionately drives information cascades.
+    \item \textbf{Overlapping group-based diffusion} follows \cite{gonzalezbailon2011diffusion}, which models protests and online coordination via overlapping communities.
+    \item \textbf{Telegram’s hub-based misinformation channels} are motivated by \cite{herasimenka2022telegram}, documenting high-reach public channels connected to dense follower clusters.
+    \item \textbf{Encrypted messaging network structure} follows \cite{bright2022encrypted}, describing multi-group membership and low-visibility peer networks.
+    \item \textbf{Reputational motives} draw from \cite{benabou2006incentives}, \cite{gentzkow2006media}, and empirical studies of misinformation sharing \citep{talwar2020fake}.
+\end{itemize}
+
+This combined structure provides a realistic environment for studying misinformation propagation across layered, overlapping, and reputationally heterogeneous networks.
+
+\subsection{Model Limitations}
+
+Several simplifying assumptions constrain the realism of the simulation:
+
+\begin{itemize}
+    \item \textbf{Ideological bias is one-dimensional}, $b_i \in [-1,1]$, while real preferences may be multi-dimensional.
+    \item \textbf{Reputation is scalar and fully observable}, whereas in real encrypted networks reputation is noisy, context-dependent, and often implicit.
+    \item \textbf{Influencer and regular-user types are discrete}, though real online influence is continuous and endogenous.
+    \item \textbf{The network is static during a simulation window}, while real WhatsApp/Telegram groups evolve (members join/leave; admins add channels).
+    \item \textbf{Message truthfulness is exogenous}, although real misinformation environments include strategic manipulation and coordinated campaigns.
+    \item \textbf{Simulated DGP}: we rely on stylized random graphs and not on microdata from actual encrypted apps.
+\end{itemize}
+
+These assumptions allow tractability and clarity but should be kept in mind when interpreting results and external validity.

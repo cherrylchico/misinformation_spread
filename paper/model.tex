@@ -1,0 +1,149 @@
+\newcommand{\bias}{\mathbf{bias}}
+\newcommand{\truth}{\mathbf{truth}}
+\newcommand{\m}{\mathbf{m}}
+\newcommand{\R}{\mathbf{R}}
+\newcommand{\agent}{\mathbf{i}}
+\newcommand{\belief}{\mathbf{belief}}
+\newcommand{\action}{\mathbf{action}}
+
+
+
+We study information diffusion in a social network environment similar to WhatsApp and Telegram, referred to here as WT platforms.
+These platforms provide a natural setting for our analysis, as they are structured around group 
+interactions where users exchange, evaluate, and forward messages. Within this environment, the 
+core components of our model involve: (i) the messages circulating through groups, (ii) the agents 
+(users) who receive and act on these messages, and (iii) the relationships among agents that define 
+group membership and interaction patterns. We formally define each of these components below.
+
+\subsection{Messages}
+In WT platforms, a single message $m$ is the basic unit of information that users receive, 
+evaluate, and decide whether to forward. Each message carries an ideological slant, reflecting 
+the political or social bias embedded in its content, and a truth value, indicating whether the 
+information is factually correct. Formally, each message is represented by its ideological slant and truthfulness:
+\begin{align}
+\m &\sim (\bias, \truth) \qquad  
+\end{align}
+where
+\begin{align}
+\bias &= 2x - 1,\quad x \sim \text{Beta}(\alpha, \beta), \bias \in [0,1] \\
+\truth &\sim \text{Bernoulli}(q), \quad \truth \in {0,1}
+\end{align}
+
+We simplify ideology into two opposing poles. The parameter $\bias$ captures the strength of 
+the message’s leaning, with values closer to $-1$ or $1$ indicating stronger alignment with 
+one of the extremes.  A value of $\beta > \alpha$ skews the distribution towards  $1$ , while $\beta < \alpha$ skews it towards $-1$. We assume that a message is only either true, $\truth=1$ and false $\truth=0$. The parameter $q$ captures the probability of getting a true message. 
+\subsection{Agents}
+
+The set of agents $N$ represents users in the WT network. Each agent $\agent \in N$ is a strategic 
+participant in group interactions, also characterized by an ideological bias $\bias$ representing 
+the agent’s own slant, and a reputation value $\R \in \mathbb{R}$, reflecting their credibility 
+based on past forwarding behavior. Thus,
+\begin{equation}
+\agent \sim (\bias, \R)
+\end{equation}
+
+where $\bias$ is similarly modeled as in Equation 2 and 
+\begin{equation}
+ \R \sim \mathcal{N}(\mu, \sigma^2), \quad \R \in \mathbb{R}
+\end{equation}
+
+The reputation $\R$ is initialized from a normal distribution where a higher $\mu$ represents higher average reputation and the variance $\sigma^2$ captures the diversity of reputations across identically distibuted users.
+
+Within WT groups, agents evaluate the truthfulness of incoming messages and select an action according to expected utility. Depending on the actual truthfulness of the message and the 
+agent’s choice, their reputation updates over time. We describe each of these components below.
+
+\subsubsection{Belief Formation}
+In WT platforms, the truthfulness of a message is often not directly observable. Agents therefore 
+form beliefs using two cues: the ideological slant of the message relative to their own bias, and 
+the sender’s reputation. This structure aligns with evidence that trust and credibility in group 
+messages depend on ideological proximity and the perceived reliability of the source 
+\citep{talwar2020fake, vellani2024motives}. The belief of agent $i$ about the truthfulness of 
+message $m$ sent by agent $j$ is:
+\begin{equation}
+\belief =
+    \begin{cases}
+    \truth, & \text{if truth is observable} \\
+    \widehat{\truth}, & \text{if truth is not observable}
+    \end{cases}
+\end{equation}
+where
+\begin{align}
+\widehat{\truth} &= \left\lfloor \phi \cdot \sigma + 0.5 \right\rfloor, \quad \widehat{\truth} \in \{0,1\}\\
+\phi(\bias_i, \bias_m) &= 1 - |\bias_i - \bias_m|, \quad \phi \in [0,1] \\
+\sigma(\R) &= \frac{1}{1 + e^{-\R}}, \quad \sigma \in \{0,1\}
+\end{align}
+
+The function $\widehat{\truth}$ estimates the agent's belief on the truthfulness of the message according to \textit{ideological proximity} represented by the function $\phi$. The ideological proximity is scaled by the reputation of the sender by a monotone transformation of $\R$ function $\sigma$. If $\widehat{\truth_m} > 0.5$ then the $belief = 1$ and 0 otherwise.
+Intuitively, in WT groups, agents are more likely to believe messages when they originate from ideologically aligned senders with high reputations.
+
+\subsubsection{Action Choice}
+After forming $\belief$, agent $\agent$ chooses whether to forward the message to their WT contacts. The action set is
+\[
+\action \in \{0,1\},
+\]
+where $\action = 1$ denotes forwarding and $\action = 0$ denotes ignoring.  
+
+Forwarding decisions in WT platforms reflect three incentives: expressive satisfaction from 
+sharing ideologically aligned content, reputational gains if the message is true, and reputational 
+losses if it is false. Forwarding also carries a fixed cost, such as the effort or risk of 
+spreading misinformation. Ignoring yields no utility. Thus, the expected utility is:
+\begin{equation}
+\mathbb{E}[u_{ij}] =
+\begin{cases}
+\omega \phi_{ij}
++ \gamma\belief_{ij}
+- \delta (1 - \belief_{ij})
+- k, & \text{if } \action = 1 \\
+0, & \text{if } \action = 0.
+\end{cases}
+\end{equation}
+
+where $\omega$, $\gamma$ and $\delta$ are similarly modeled as the $\bias$ in Equation 2,
+$\omega + \gamma = 1$, $\omega + \delta = 1$ and $k \in [0,1]$
+
+Here, $\omega$ represents the benefit from forwarding ideologically aligned messages, 
+$\gamma$ the reputational gain from forwarding a true message, 
+$\delta$ the reputational penalty from forwarding a false one, 
+and $k$ the fixed cost of forwarding. Because agents in WT groups often receive the same 
+message from multiple senders, the overall utility is the average across all sources:
+\[
+\mathbb{E}[u_{i}] = \frac{1}{|\S_i|} \sum_{j \in S_i} \mathbb{E}[u_{ij}],
+\]
+where $\S_i$ is the set of senders from whom agent $i$ received the message at time $t$. 
+The agent forwards if $\mathbb{E}[u_i] \geq 0$.
+
+\subsubsection{Reputation Update}
+We assume reputation is the guiding principle for agents in the WT network. 
+Empirical studies of WhatsApp and Telegram show that users rely on sender credibility, 
+and reputational cues strongly shape forwarding behavior 
+\citep{pasquetto2022social, herasimenka2022telegram}. 
+Accordingly, our model treats reputation as the central mechanism of credibility: it rises 
+when agents forward true messages and falls when they forward false ones. Formally,
+
+\begin{equation}
+R_i^{t+1} = R_i^t 
++ \eta \cdot \mathbf{1}\{a_i^t = 1 \land \theta_t = 1\}
+- \lambda \cdot \mathbf{1}\{a_i^t = 1 \land \theta_t = 0\}
+\end{equation}
+
+where $\eta, \lambda > 0$ govern the strength of reputational gains and losses respectively. Reputation evolves only through the correctness of forwarding actions. Ignoring a message leaves reputation unchanged.
+
+\subsection{Social Network}
+Social networks on WT platforms are organized around 
+groups of users who interact repeatedly. In our representation, each agent corresponds 
+to a node, and communication ties (e.g., channel membership) are modeled as edges. Note that the edge is directed and one way to model from one agent to another mimicking the action of forwarding a message. Empirical studies show that these platforms are characterized by dense clusters 
+of interpersonal ties within groups, alongside weaker spillovers across groups 
+\citep{herasimenka2022telegram}. 
+
+We model the social network as a directed graph $G = (N, E)$, where $N$ is the set of agents (nodes) and $E$ is the set of directed edges representing communication ties (e.g., channel memberships). The network is generated using a stochastic block model to capture the clustered group structure typical of WT platforms. Formally, we partition agents into $K$ latent groups $\{G_1, G_2, \ldots, G_K\}$. The probability of a directed edge from agent  $i$ to agent $j$ depends on their group memberships:
+
+\begin{equation}
+\Pr((i,j)\in G) =
+\begin{cases}
+p_{\text{in}}, & \text{if } i,j \text{ share at least one group}, \\
+p_{\text{out}}, & \text{otherwise},
+\end{cases}
+\quad \text{with } p_{\text{in}} > p_{\text{out}} > 0.
+\end{equation}
+
+Here, $p_{in}$ is the probability of a directed edge between agents within the same group, while $p_{out}$ is the probability of an edge between agents in different groups. This structure captures the tendency for users on WT platforms to form tightly-knit groups with frequent interactions, while still allowing for cross-group connections that facilitate broader information diffusion.
