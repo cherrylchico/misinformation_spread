@@ -2,3 +2,5 @@
 # except for main.pdf, which should be tracked by git
 paper/aux_files/*
 !paper/aux_files/main.pdf
+
+.DS_Store
