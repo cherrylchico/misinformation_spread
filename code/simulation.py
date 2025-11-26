@@ -30,11 +30,14 @@ class Simulation:
             self.config = kwargs if kwargs else self._default_config()
         
         # Network parameters
-        self.num_agents = self.config.get('num_agents', 20)
-        self.prob_in = self.config.get('prob_in', 0.6)  # Not used for BA model
-        self.prob_out = self.config.get('prob_out', 0.1)  # Not used for BA model
+        self.network_type = self.config.get('network_type', 'facebook')  # 'barabasi_albert' or 'facebook' (default: facebook)
+        self.network_file = self.config.get('network_file', None)  # Path to Facebook edge list
+        self.num_agents = self.config.get('num_agents', 100)  # Number of agents (for both network types)
+        self.prob_in = self.config.get('prob_in', 0.6)  # Not used, kept for compatibility
+        self.prob_out = self.config.get('prob_out', 0.1)  # Not used, kept for compatibility
         self.num_groups = self.config.get('num_groups', 2)
         self.ba_m = self.config.get('ba_m', 2)  # Number of edges to attach in BA model
+        self.use_top_degree_influencers = self.config.get('use_top_degree_influencers', True)  # Use top degree nodes as influencers
         
         # Message parameters
         self.message_left_bias = self.config.get('message_left_bias', 2.0)
@@ -60,18 +63,49 @@ class Simulation:
         
         # Simulation parameters
         self.num_rounds = self.config.get('num_rounds', 10)
-        # Initial senders will be the high_reputation agents (first high_rep_count agents)
-        self.initial_senders = list(range(self.high_rep_count))
         
-        # Initialize components
-        self.network = SocialNetwork(
-            self.num_agents, 
-            self.prob_in, 
-            self.prob_out, 
-            self.num_groups,
-            seed=self.config.get('seed', None),
-            m=self.ba_m
-        )
+        # Initialize network
+        if self.network_type == 'facebook':
+            if self.network_file is None:
+                # Try default path
+                import os
+                default_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'facebook_combined.txt')
+                if os.path.exists(default_path):
+                    self.network_file = default_path
+                else:
+                    raise ValueError("network_file must be provided when network_type='facebook'")
+            
+            self.network = SocialNetwork(
+                num_agents=self.num_agents,  # Can specify number of agents to sample
+                prob_in=self.prob_in,
+                prob_out=self.prob_out,
+                num_groups=self.num_groups,
+                seed=self.config.get('seed', None),
+                m=self.ba_m,
+                network_type='facebook',
+                network_file=self.network_file
+            )
+            # Update num_agents from loaded network (in case it was sampled)
+            self.num_agents = self.network.num_agents
+        else:  # barabasi_albert
+            self.network = SocialNetwork(
+                num_agents=self.num_agents,
+                prob_in=self.prob_in,
+                prob_out=self.prob_out,
+                num_groups=self.num_groups,
+                seed=self.config.get('seed', None),
+                m=self.ba_m,
+                network_type='barabasi_albert',
+                network_file=None
+            )
+        
+        # Determine initial senders (influencers)
+        if self.use_top_degree_influencers and self.network_type == 'facebook':
+            # Use top degree nodes as influencers
+            self.initial_senders = self.network.get_top_degree_nodes(self.high_rep_count)
+        else:
+            # Use first high_rep_count agents
+            self.initial_senders = list(range(self.high_rep_count))
         
         self.agents = self._create_agents()
         self.messages = []

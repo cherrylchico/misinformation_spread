@@ -20,16 +20,60 @@ pip install -r requirements.txt
 
 ## Basic Usage
 
+### Using Facebook Network (Default)
+
 Run the simulation with default parameters:
 
 ```bash
 python3 simulation.py
 ```
 
+This uses the Facebook network by default. You can customize in `config.json`:
+
+```json
+{
+  "network_type": "facebook",
+  "network_file": "../data/facebook_combined.txt",
+  "num_agents": 100,
+  "high_rep_count": 3,
+  "use_top_degree_influencers": true,
+  ...
+}
+```
+
+The simulation will:
+1. Load the Facebook network from the edge list file
+2. Sample `num_agents` nodes (if specified and smaller than total, selects top degree nodes)
+3. Use community detection to assign groups
+4. Select top `high_rep_count` degree nodes as influencers
+
+**Note**: The full Facebook network has 4039 nodes. You can specify a smaller `num_agents` to sample a subset.
+
+### Using Generated Network (Barabási-Albert)
+
+To use a generated Barabási-Albert network:
+
+1. Edit `config.json`:
+```json
+{
+  "network_type": "barabasi_albert",
+  "num_agents": 100,
+  "high_rep_count": 3,
+  "ba_m": 2,
+  ...
+}
+```
+
+2. Run the simulation:
+```bash
+python3 simulation.py
+```
+
 This will:
-1. Create a social network with 20 agents
-2. Run 10 simulation rounds
-3. Generate network and metrics visualizations
+1. Generate a Barabási-Albert network with specified number of agents
+2. Use first `high_rep_count` agents as influencers
+3. Run simulation rounds
+4. Generate network and metrics visualizations
 
 ## Modifying Parameters
 
@@ -75,10 +119,20 @@ sim.plot_metrics()
 ## Important Parameters
 
 ### Network
-- **num_agents**: Number of agents in the network (recommended: 10-50 to start)
+- **network_type**: Type of network to use - `'facebook'` (default) or `'barabasi_albert'`
+- **network_file**: Path to Facebook edge list file (required if `network_type='facebook'`)
+- **num_agents**: Number of agents in the network (works for both types)
+  - For Facebook: if specified and smaller than total nodes, samples top degree nodes
+  - For Barabási-Albert: exact number of agents to generate
+- **high_rep_count**: Number of influencers (default: 3)
+  - For Facebook: selects top degree nodes as influencers
+  - For Barabási-Albert: uses first `high_rep_count` agents
 - **ba_m**: Number of edges to attach from a new node to existing nodes in Barabási-Albert model (default: 2)
-- **num_groups**: Number of groups for visualization purposes (groups are assigned based on node degree)
-- **Note**: The network uses Barabási-Albert (scale-free) model. Parameters `prob_in` and `prob_out` are kept for compatibility but not used.
+- **num_groups**: Number of groups for visualization purposes
+  - For Barabási-Albert: groups assigned based on node degree
+  - For Facebook: groups assigned using community detection (Louvain algorithm)
+- **use_top_degree_influencers**: If `true`, selects top degree nodes as influencers (default: true, recommended for Facebook networks)
+- **Note**: Parameters `prob_in` and `prob_out` are kept for compatibility but not used.
 
 ### Messages
 - **prob_truth**: Probability of a message being true (0-1)
@@ -130,8 +184,10 @@ The simulation generates three files:
 - `simulation.py`: Main file with the Simulation class
 - `snlearn/agent.py`: Agent implementation
 - `snlearn/message.py`: Message implementation
-- `snlearn/socialnetwork.py`: Social network generation and management
-- `config.json`: Optional configuration file
+- `snlearn/socialnetwork.py`: Social network generation and management (supports Barabási-Albert and Facebook)
+- `config.json`: Configuration file for Barabási-Albert network
+- `config_facebook.json`: Example configuration file for Facebook network
+- `data/facebook_combined.txt`: Facebook network edge list (if available)
 
 ## Example: Small and Simple Network
 

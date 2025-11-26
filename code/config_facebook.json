@@ -1,11 +1,7 @@
 {
   "network_type": "facebook",
   "network_file": "../data/facebook_combined.txt",
-  "num_agents": 100,
-  "prob_in": 0.6,
-  "prob_out": 0.1,
   "num_groups": 4,
-  "ba_m": 2,
   "use_top_degree_influencers": true,
   "message_left_bias": 2.0,
   "message_right_bias": 2.0,
