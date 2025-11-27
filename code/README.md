@@ -181,13 +181,59 @@ The simulation generates three files:
 
 ## Code Structure
 
-- `simulation.py`: Main file with the Simulation class
+- `simulation.py`: Main script to run simulations
+- `snlearn/simulation.py`: Simulation class implementation
 - `snlearn/agent.py`: Agent implementation
 - `snlearn/message.py`: Message implementation
-- `snlearn/socialnetwork.py`: Social network generation and management (supports Barabási-Albert and Facebook)
+- `snlearn/socialnetwork.py`: Social network generation and management
 - `config.json`: Configuration file for Barabási-Albert network
 - `config_facebook.json`: Example configuration file for Facebook network
 - `data/facebook_combined.txt`: Facebook network edge list (if available)
+
+## Using SocialNetwork Class Directly
+
+The `SocialNetwork` class has a clean API with `num_agents` and `seed` as main parameters, and network-specific configurations in dictionaries:
+
+### Barabási-Albert Network
+
+```python
+from snlearn.socialnetwork import SocialNetwork
+
+# Create a Barabási-Albert network
+network = SocialNetwork(
+    num_agents=100,
+    seed=42,
+    barabasi_params={
+        'm': 3,           # Number of edges to attach from new node
+        'num_groups': 2   # Number of groups for visualization
+    }
+)
+```
+
+### Facebook Network
+
+```python
+from snlearn.socialnetwork import SocialNetwork
+
+# Load Facebook network
+network = SocialNetwork(
+    num_agents=100,  # Sample 100 nodes (optional, uses all if not specified)
+    seed=42,
+    facebook_params={
+        'network_file': '../data/facebook_combined.txt',
+        'num_groups': 2   # Number of groups for visualization
+    }
+)
+```
+
+### Default (Barabási-Albert with defaults)
+
+```python
+from snlearn.socialnetwork import SocialNetwork
+
+# Simple network with default parameters (m=2, num_groups=2)
+network = SocialNetwork(num_agents=50, seed=42)
+```
 
 ## Example: Small and Simple Network
 

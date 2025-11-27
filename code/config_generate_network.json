@@ -1,5 +1,9 @@
 {
-  "network_pickle_file": "../data/facebook_community_100nodes_seed42.pkl",
+  "network_type": "facebook",
+  "network_file": "../data/facebook_combined.txt",
+  "sampling_method": "community",
+  "num_agents": 100,
+  "num_groups": 5,
   "use_top_degree_influencers": true,
   "message_left_bias": 2.0,
   "message_right_bias": 2.0,
@@ -18,4 +22,3 @@
   "num_rounds": 10,
   "seed": 42
 }
-

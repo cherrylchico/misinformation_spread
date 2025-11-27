@@ -14,6 +14,7 @@ from snlearn.message import Message
 from typing import List, Dict
 import json
 
+
 class Simulation:
     def __init__(self, config_file=None, **kwargs):
         """
@@ -30,6 +31,7 @@ class Simulation:
             self.config = kwargs if kwargs else self._default_config()
         
         # Network parameters
+        self.network_pickle_file = self.config.get('network_pickle_file', None)  # Path to saved network pickle
         self.network_type = self.config.get('network_type', 'facebook')  # 'barabasi_albert' or 'facebook' (default: facebook)
         self.network_file = self.config.get('network_file', None)  # Path to Facebook edge list
         self.num_agents = self.config.get('num_agents', 100)  # Number of agents (for both network types)
@@ -37,6 +39,7 @@ class Simulation:
         self.prob_out = self.config.get('prob_out', 0.1)  # Not used, kept for compatibility
         self.num_groups = self.config.get('num_groups', 2)
         self.ba_m = self.config.get('ba_m', 2)  # Number of edges to attach in BA model
+        self.sampling_method = self.config.get('sampling_method', None)  # Sampling method for Facebook
         self.use_top_degree_influencers = self.config.get('use_top_degree_influencers', True)  # Use top degree nodes as influencers
         
         # Message parameters
@@ -65,38 +68,53 @@ class Simulation:
         self.num_rounds = self.config.get('num_rounds', 10)
         
         # Initialize network
-        if self.network_type == 'facebook':
+        if self.network_pickle_file:
+            # Load pre-saved network from pickle file
+            import pickle
+            import os
+            if not os.path.exists(self.network_pickle_file):
+                raise FileNotFoundError(f"Network pickle file not found: {self.network_pickle_file}")
+            
+            print(f"Loading network from pickle file: {self.network_pickle_file}")
+            with open(self.network_pickle_file, 'rb') as f:
+                self.network = pickle.load(f)
+            
+            # Update parameters from loaded network
+            self.num_agents = self.network.num_agents
+            self.network_type = self.network.network_type
+            print(f"Loaded {self.network_type} network with {self.num_agents} agents")
+            
+        elif self.network_type == 'facebook':
             if self.network_file is None:
                 # Try default path
                 import os
-                default_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'facebook_combined.txt')
+                default_path = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'facebook_combined.txt')
                 if os.path.exists(default_path):
                     self.network_file = default_path
                 else:
                     raise ValueError("network_file must be provided when network_type='facebook'")
             
+            facebook_params = {
+                'network_file': self.network_file,
+                'num_groups': self.num_groups,
+                'sampling_method': self.sampling_method
+            }
             self.network = SocialNetwork(
-                num_agents=self.num_agents,  # Can specify number of agents to sample
-                prob_in=self.prob_in,
-                prob_out=self.prob_out,
-                num_groups=self.num_groups,
+                num_agents=self.num_agents,
                 seed=self.config.get('seed', None),
-                m=self.ba_m,
-                network_type='facebook',
-                network_file=self.network_file
+                facebook_params=facebook_params
             )
             # Update num_agents from loaded network (in case it was sampled)
             self.num_agents = self.network.num_agents
         else:  # barabasi_albert
+            barabasi_params = {
+                'm': self.ba_m,
+                'num_groups': self.num_groups
+            }
             self.network = SocialNetwork(
                 num_agents=self.num_agents,
-                prob_in=self.prob_in,
-                prob_out=self.prob_out,
-                num_groups=self.num_groups,
                 seed=self.config.get('seed', None),
-                m=self.ba_m,
-                network_type='barabasi_albert',
-                network_file=None
+                barabasi_params=barabasi_params
             )
         
         # Determine initial senders (influencers)
@@ -268,6 +286,10 @@ class Simulation:
     
     def visualize_network(self, round_result=None, save_path=None):
         """Visualize the network and message diffusion"""
+        # Compute group assignments if not already done
+        if self.network.group_assignments is None:
+            self.network.compute_group_assignments()
+        
         G = self.network.graph
         pos = nx.spring_layout(G, seed=42, k=1, iterations=50)
         
@@ -498,70 +520,3 @@ class Simulation:
         if save_path:
             plt.savefig(save_path, dpi=150, bbox_inches='tight')
         plt.show()
-
-
-def main():
-    """Main function to run the simulation"""
-    # Try to load from config.json, otherwise use default values
-    import os
-    config_file = 'config.json' if os.path.exists('config.json') else None
-    
-    if config_file:
-        print("Loading configuration from config.json...")
-        sim = Simulation(config_file=config_file)
-    else:
-        # Default configuration
-        config = {
-            'num_agents': 100,
-            'prob_in': 0.6,
-            'prob_out': 0.1,
-            'num_groups': 2,
-            'message_left_bias': 2.0,
-            'message_right_bias': 2.0,
-            'prob_truth': 0.8,
-            'agent_left_bias': 2.0,
-            'agent_right_bias': 2.0,
-            'ave_reputation': 0.0,
-            'variance_reputation': 1.0,
-            'bias_strength': 0.3,
-            'high_rep_count': 3,              # Number of influencers (2-4)
-            'high_rep_reward': 1.0,            # High reward for influencers
-            'high_rep_penalty': 1.0,           # High penalty for influencers
-            'low_rep_reward': 0.5,             # Low reward for regular users
-            'low_rep_penalty': 0.5,            # Low penalty for regular users
-            'forwarding_cost': 0.1,
-            'num_rounds': 10,
-            'seed': 42
-        }
-        sim = Simulation(**config)
-    
-    results = sim.run()
-    
-    # Visualizations
-    print("\nGenerating visualizations...")
-    
-    # Show diffusion of the last round
-    if results:
-        sim.visualize_network(round_result=results[-1], 
-                             save_path='network_diffusion.png')
-    
-    # Show metrics over time
-    sim.plot_metrics(save_path='metrics.png')
-    
-    # Create animated GIF of diffusion
-    print("\nCreating animated GIF of diffusion...")
-    sim.create_diffusion_gif(results, save_path='diffusion_animation.gif', fps=1)
-    
-    print("\nSimulation complete!")
-    print(f"Average reach: {np.mean(sim.history['reach']):.2%}")
-    print(f"Average forwarding rate: {np.mean(sim.history['forwarding_rate']):.2%}")
-    print(f"Average contamination: {np.mean(sim.history['misinformation_contamination']):.2%}")
-    print(f"\nGenerated files:")
-    print(f"  - network_diffusion.png")
-    print(f"  - metrics.png")
-    print(f"  - diffusion_animation.gif")
-
-
-if __name__ == '__main__':
-    main()
-
