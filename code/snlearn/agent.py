@@ -11,7 +11,9 @@ class Agent:
             variance_reputation: float, 
             bias_strength: float, 
             reputation_reward_strength: float, 
-            reputation_penalty_strength: float, 
+            reputation_penalty_strength: float,
+            forwarding_cost: float = 0.1,
+            agent_type: str = 'regular',
             ):
         
         #agent parameters
@@ -22,15 +24,17 @@ class Agent:
         self.bias_strength = bias_strength
         self.reputation_reward_strength = reputation_reward_strength
         self.reputation_penalty_strength = reputation_penalty_strength
+        self.forwarding_cost = forwarding_cost
+        self.agent_type = agent_type  # 'high_reputation' or 'low_reputation'
 
         #baseline attributes
         self.bias = self._sample_bias()
         self.baseline_reputation = self._sample_reputation()
 
         #updating attributes
-        self.utility = None
-        self.action = None
-        self.reputation = self.baseline_reputation.copy()
+        self.current_utility = None
+        self.current_action = None
+        self.reputation = self.baseline_reputation
 
         #history_storage
         self.utility_history = []
@@ -60,8 +64,8 @@ class Agent:
     def estimated_truth(self, message_bias, sender_reputation):
         proximity = self.bias_proximity(message_bias)
         reputation = self.assess_reputation(sender_reputation)
-        estimate = np.floor(proximity * reputation + 0.5)
-        return 1 if estimate > 0.5 else 0
+        estimate = proximity * reputation
+        return 1 if estimate >= 0.5 else 0
     
     def utility(self, message: Message, sender_reputation: float):
         if message.truth_revealed:
@@ -69,7 +73,11 @@ class Agent:
         else:
             message_truth = self.estimated_truth(message.bias, sender_reputation)
         
-        util = self.bias_strength * self.bias_proximity(message.bias) + self.reputation_reward_strength * message_truth - self.reputation_penalty_strength * (1 - message_truth)
+        proximity = self.bias_proximity(message.bias)
+        util = (self.bias_strength * proximity 
+                + self.reputation_reward_strength * message_truth 
+                - self.reputation_penalty_strength * (1 - message_truth)
+                - self.forwarding_cost)
         return util
     
     def average_utility(self, message: Message, sender_reputation_list: List[float], store: bool = False):
@@ -78,14 +86,14 @@ class Agent:
             util = self.utility(message, sender_reputation)
             utilities.append(util)
         avg_util = np.mean(utilities)
-        self.utility = avg_util
+        self.current_utility = avg_util
         if store:
             self.utility_history.append(avg_util)
         return avg_util
     
-    def action(self, store: bool = False):
-        action = 1 if self.utility > 0 else 0
-        self.action = action
+    def decide_action(self, store: bool = False):
+        action = 1 if self.current_utility >= 0 else 0
+        self.current_action = action
         if store:
             self.action_history.append(action)
         return action
@@ -98,13 +106,13 @@ class Agent:
             acted_on_truth = 0
             acted_on_misinfo = 0
             
-            if self.action == 1 and message_truth == 1:
+            if self.current_action == 1 and message_truth == 1:
                 acted_on_truth = 1
             
-            if self.action == 1 and message_truth == 0:
+            if self.current_action == 1 and message_truth == 0:
                 acted_on_misinfo = 1
     
-            self.reputation += self.reputation + self.reputation_reward_strength * acted_on_truth - self.reputation_penalty_strength * acted_on_misinfo
+            self.reputation += self.reputation_reward_strength * acted_on_truth - self.reputation_penalty_strength * acted_on_misinfo
 
         if store:
             self.reputation_history.append(self.reputation)
