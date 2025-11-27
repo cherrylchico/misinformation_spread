@@ -14,20 +14,28 @@ class Agent:
             reputation_penalty_strength: float,
             forwarding_cost: float = 0.1,
             agent_type: str = 'regular',
+            type: str = None,  # 'influencer', 'regular', or 'both'
             ):
         
-        #agent parameters
-        self.left_bias = left_bias
-        self.right_bias = right_bias
-        self.ave_reputation = ave_reputation
-        self.variance_reputation = variance_reputation
+        # Hidden parameters (used only for sampling distributions)
+        self._left_bias = left_bias
+        self._right_bias = right_bias
+        self._ave_reputation = ave_reputation
+        self._variance_reputation = variance_reputation
+        
+        # Agent parameters
         self.bias_strength = bias_strength
         self.reputation_reward_strength = reputation_reward_strength
         self.reputation_penalty_strength = reputation_penalty_strength
         self.forwarding_cost = forwarding_cost
-        self.agent_type = agent_type  # 'high_reputation' or 'low_reputation'
+        
+        # Type attribute: 'influencer', 'regular', or 'both'
+        self.type = type if type is not None else 'regular'
+        
+        # Keep agent_type for backward compatibility (maps to old high/low reputation types)
+        self.agent_type = agent_type
 
-        #baseline attributes
+        # Baseline attributes (sampled from distributions)
         self.bias = self._sample_bias()
         self.baseline_reputation = self._sample_reputation()
 
@@ -42,15 +50,15 @@ class Agent:
         self.reputation_history = []
 
     def _sample_bias(self):
-        sample = np.random.beta(self.left_bias, self.right_bias)
+        sample = np.random.beta(self._left_bias, self._right_bias)
         bias = 2 * sample - 1
         self.bias = bias
         return bias
 
     def _sample_reputation(self):
         reputation = np.random.normal(
-            self.ave_reputation, 
-            np.sqrt(self.variance_reputation))
+            self._ave_reputation, 
+            np.sqrt(self._variance_reputation))
         return reputation
 
     def assess_reputation(self, sender_reputation):
