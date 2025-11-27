@@ -20,10 +20,8 @@ class SocialNetwork:
             seed: Random seed for reproducibility
             barabasi_params: Dict with Barabási-Albert parameters:
                 - m: Number of edges to attach from a new node (default: 2)
-                - num_groups: Number of groups for visualization (default: 2)
             facebook_params: Dict with Facebook network parameters:
                 - network_file: Path to edge list file (required)
-                - num_groups: Number of groups for visualization (default: 2)
                 - sampling_method: 'community' (community-based), 'degree' (top-degree), or None (no sampling, default: None)
         
         Note: Provide either barabasi_params or facebook_params, not both.
@@ -42,7 +40,6 @@ class SocialNetwork:
                 raise ValueError("facebook_params must include 'network_file'")
             
             self.network_file = facebook_params['network_file']
-            self.num_groups = facebook_params.get('num_groups', 2)
             self.sampling_method = facebook_params.get('sampling_method', None)
             
             self.adj_matrix, self.graph, self.num_agents = \
@@ -53,7 +50,6 @@ class SocialNetwork:
             # Barabási-Albert network
             self.network_type = 'barabasi_albert'
             self.m = barabasi_params.get('m', 2)
-            self.num_groups = barabasi_params.get('num_groups', 2)
             
             self.adj_matrix, self.graph = self._generate_barabasi_albert()
             self.group_assignments = None
@@ -62,17 +58,17 @@ class SocialNetwork:
             # Default to Barabási-Albert with default parameters
             self.network_type = 'barabasi_albert'
             self.m = 2
-            self.num_groups = 2
             
             self.adj_matrix, self.graph = self._generate_barabasi_albert()
             self.group_assignments = None
 
-    def _assign_groups_by_degree(self, graph, num_agents):
+    def _assign_groups_by_degree(self, graph, num_agents, num_groups=5):
         """Assign groups based on node degree for visualization
         
         Args:
             graph: NetworkX graph object
             num_agents: Number of agents in the network
+            num_groups: Number of groups to create (default: 5)
             
         Returns:
             List of group assignments for each agent
@@ -83,11 +79,11 @@ class SocialNetwork:
         sorted_nodes = sorted(range(num_agents), key=lambda x: degrees[x], reverse=True)
         
         group_assignments = [0] * num_agents
-        group_size = num_agents // self.num_groups
+        group_size = num_agents // num_groups
         
-        for group_id in range(self.num_groups):
+        for group_id in range(num_groups):
             start_idx = group_id * group_size
-            end_idx = (group_id + 1) * group_size if group_id < self.num_groups - 1 else num_agents
+            end_idx = (group_id + 1) * group_size if group_id < num_groups - 1 else num_agents
             for idx in range(start_idx, end_idx):
                 if idx < len(sorted_nodes):
                     group_assignments[sorted_nodes[idx]] = group_id
@@ -356,21 +352,20 @@ class SocialNetwork:
         
         return adj, G_relabeled, num_agents
     
-    def compute_group_assignments(self, method='auto'):
+    def compute_group_assignments(self, method='auto', num_degree_groups=5):
         """Compute and store group assignments for visualization
         
         Args:
-            method: 'auto' (community detection for Facebook, degree for Barabási-Albert),
+            method: 'auto' (community detection for all networks),
                     'degree' (degree-based), or 'community' (community detection)
+            num_degree_groups: Number of groups for degree-based assignment (default: 5)
         
         Returns:
             List of group assignments for each agent
         """
         if method == 'auto':
-            if self.network_type == 'facebook':
-                method = 'community'
-            else:
-                method = 'degree'
+            # Use community detection for all network types
+            method = 'community'
         
         if method == 'community':
             # Get undirected version of graph for community detection
@@ -379,35 +374,20 @@ class SocialNetwork:
             
             if partition is None:
                 # Fallback to degree-based if community detection not available
-                group_assignments = self._assign_groups_by_degree(self.graph, self.num_agents)
+                group_assignments = self._assign_groups_by_degree(self.graph, self.num_agents, num_degree_groups)
             else:
-                # Map partitions to group assignments
-                unique_communities = list(set(partition.values()))
-                num_communities = len(unique_communities)
-                
-                # Limit to num_groups if there are more communities
-                if num_communities > self.num_groups:
-                    # Sort communities by size and keep largest ones
-                    community_sizes = {comm: len(communities[comm]) for comm in unique_communities}
-                    top_communities = sorted(community_sizes.items(), key=lambda x: x[1], reverse=True)[:self.num_groups]
-                    top_comm_ids = [comm[0] for comm in top_communities]
-                else:
-                    top_comm_ids = unique_communities
-                
-                # Create mapping from community to group
-                comm_to_group = {comm_id: i % self.num_groups for i, comm_id in enumerate(top_comm_ids)}
+                # Use actual detected communities - each community gets its own group
+                # Create mapping from community ID to group number (0-indexed)
+                unique_communities = sorted(set(partition.values()))
+                comm_to_group = {comm_id: i for i, comm_id in enumerate(unique_communities)}
                 
                 group_assignments = [0] * self.num_agents
-                for node in range(self.num_agents):
+                for node in self.graph.nodes():
                     if node in partition:
                         comm_id = partition[node]
-                        if comm_id in comm_to_group:
-                            group_assignments[node] = comm_to_group[comm_id]
-                        else:
-                            # Assign to random group if not in top communities
-                            group_assignments[node] = np.random.randint(0, self.num_groups)
+                        group_assignments[node] = comm_to_group[comm_id]
         else:  # method == 'degree'
-            group_assignments = self._assign_groups_by_degree(self.graph, self.num_agents)
+            group_assignments = self._assign_groups_by_degree(self.graph, self.num_agents, num_degree_groups)
         
         self.group_assignments = group_assignments
         return group_assignments

@@ -96,7 +96,6 @@ class Simulation:
             
             facebook_params = {
                 'network_file': self.network_file,
-                'num_groups': self.num_groups,
                 'sampling_method': self.sampling_method
             }
             self.network = SocialNetwork(
@@ -108,8 +107,7 @@ class Simulation:
             self.num_agents = self.network.num_agents
         else:  # barabasi_albert
             barabasi_params = {
-                'm': self.ba_m,
-                'num_groups': self.num_groups
+                'm': self.ba_m
             }
             self.network = SocialNetwork(
                 num_agents=self.num_agents,
@@ -291,13 +289,15 @@ class Simulation:
             self.network.compute_group_assignments()
         
         G = self.network.graph
-        pos = nx.spring_layout(G, seed=42, k=1, iterations=50)
+        # Use network's seed for consistent layout
+        pos = nx.spring_layout(G, seed=self.network.seed, k=0.5, iterations=50)
         
         fig, axes = plt.subplots(1, 2, figsize=(16, 8))
         
         # Subplot 1: Network with colors by group
         ax1 = axes[0]
-        colors = plt.cm.Set3(np.linspace(0, 1, self.num_groups))
+        num_communities = len(set(self.network.group_assignments))
+        colors = plt.cm.Set3(np.linspace(0, 1, num_communities))
         node_colors = [colors[self.network.group_assignments[i] % len(colors)] 
                       for i in range(self.num_agents)]
         
@@ -387,7 +387,8 @@ class Simulation:
     def create_diffusion_gif(self, results, save_path='diffusion_animation.gif', fps=1):
         """Create an animated GIF showing diffusion in each round"""
         G = self.network.graph
-        pos = nx.spring_layout(G, seed=42, k=1, iterations=50)
+        # Use network's seed for consistent layout
+        pos = nx.spring_layout(G, seed=self.network.seed, k=0.5, iterations=50)
         
         fig, ax = plt.subplots(figsize=(12, 10))
         

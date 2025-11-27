@@ -6,6 +6,7 @@ Generates a network visualization showing community or degree structure
 import matplotlib.pyplot as plt
 import networkx as nx
 from snlearn.socialnetwork import SocialNetwork
+from snlearn.draw_network import draw_network, print_community_statistics
 import os
 import argparse
 
@@ -14,7 +15,6 @@ def visualize_network(num_agents,
                       sampling_method=None,
                       m=2,
                       network_file='../data/facebook_combined.txt',
-                      num_groups=5,
                       seed=42,
                       save_network=False):
     """Create and visualize a sampled network
@@ -25,7 +25,6 @@ def visualize_network(num_agents,
         sampling_method: 'community', 'degree', or None (for Facebook only, default: None)
         m: Number of edges for Barabási-Albert (default: 2)
         network_file: Path to Facebook edge list file (default: '../data/facebook_combined.txt')
-        num_groups: Number of groups for visualization (default: 5)
         seed: Random seed for reproducibility (default: 42)
         save_network: If True, saves network to data folder as pickle (default: False)
     """
@@ -39,7 +38,6 @@ def visualize_network(num_agents,
             seed=seed,
             facebook_params={
                 'network_file': network_file,
-                'num_groups': num_groups,
                 'sampling_method': sampling_method
             }
         )
@@ -48,8 +46,7 @@ def visualize_network(num_agents,
             num_agents=num_agents,
             seed=seed,
             barabasi_params={
-                'm': m,
-                'num_groups': num_groups
+                'm': m
             }
         )
     
@@ -57,89 +54,16 @@ def visualize_network(num_agents,
     print("Computing group assignments for visualization...")
     network.compute_group_assignments(method='auto')
     
-    # Create visualization
+    # Create visualization using draw_network module
     print("Generating visualization...")
-    fig, ax = plt.subplots(figsize=(14, 10))
-    
-    # Use spring layout for better community visualization
-    pos = nx.spring_layout(network.graph, k=0.5, iterations=50, seed=seed)
-    
-    # Get unique groups and create color map
-    unique_groups = list(set(network.group_assignments))
-    colors = plt.cm.Set3(range(len(unique_groups)))
-    color_map = {group: colors[i] for i, group in enumerate(unique_groups)}
-    
-    # Color nodes by community
-    node_colors = [color_map[network.group_assignments[node]] for node in range(network.num_agents)]
-    
-    # Get node degrees for sizing
-    degrees = [network.graph.degree(node) for node in range(network.num_agents)]
-    max_degree = max(degrees)
-    min_degree = min(degrees)
-    
-    # Normalize sizes between 100 and 1000
-    node_sizes = [100 + 900 * (deg - min_degree) / (max_degree - min_degree) if max_degree > min_degree else 300 
-                  for deg in degrees]
-    
-    # Draw network
-    nx.draw_networkx_nodes(
-        network.graph, pos,
-        node_color=node_colors,
-        node_size=node_sizes,
-        alpha=0.8,
-        ax=ax
-    )
-    
-    nx.draw_networkx_edges(
-        network.graph, pos,
-        alpha=0.2,
-        width=0.5,
-        ax=ax
-    )
-    
-    # Add legend for communities
-    legend_elements = [plt.Line2D([0], [0], marker='o', color='w', 
-                                  markerfacecolor=color_map[group], 
-                                  markersize=10, label=f'Community {group}')
-                      for group in unique_groups]
-    ax.legend(handles=legend_elements, loc='upper right', fontsize=10)
-    
-    # Title and styling
-    title = f'{network_type.capitalize()} Network'
-    if network_type == 'facebook':
-        if sampling_method == 'community':
-            title += ' - Community-Based Sampling'
-        elif sampling_method == 'degree':
-            title += ' - Degree-Based Sampling'
-        else:
-            title += ' - Default Sampling'
-    
-    ax.set_title(f'{title}\n{network.num_agents} Nodes', 
-                fontsize=16, fontweight='bold', pad=20)
-    ax.axis('off')
-    
-    # Add statistics
-    stats_text = f"Total nodes: {network.num_agents}\n"
-    stats_text += f"Total edges: {network.graph.number_of_edges() // 2}\n"  # Divide by 2 since it's bidirectional
-    stats_text += f"Communities detected: {len(unique_groups)}\n"
-    stats_text += f"Avg degree: {sum(degrees) / len(degrees):.1f}\n"
-    stats_text += f"Max degree: {max_degree}\n"
-    stats_text += f"Min degree: {min_degree}"
-    
-    ax.text(0.02, 0.98, stats_text, transform=ax.transAxes,
-           fontsize=10, verticalalignment='top',
-           bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
-    
-    # Save figure
-    figures_dir = '../figures'
-    os.makedirs(figures_dir, exist_ok=True)
     
     # Create filename based on parameters
+    figures_dir = '../figures'
     filename = f'{network_type}_{sampling_method or "default"}_{num_agents}nodes.png'
     output_path = os.path.join(figures_dir, filename)
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
-    print(f"\nVisualization saved to: {output_path}")
+    
+    # Draw the network
+    fig, ax = draw_network(network, seed=seed, save_path=output_path)
     
     # Save network to data folder if requested
     if save_network:
@@ -162,12 +86,7 @@ def visualize_network(num_agents,
         print(f"      network = pickle.load(f)")
     
     # Print community statistics
-    print("\nCommunity Statistics:")
-    for group in sorted(unique_groups):
-        count = network.group_assignments.count(group)
-        avg_deg = sum(degrees[i] for i in range(network.num_agents) 
-                     if network.group_assignments[i] == group) / count
-        print(f"  Community {group}: {count} nodes, avg degree: {avg_deg:.1f}")
+    print_community_statistics(network)
     
     return network
 
@@ -210,8 +129,6 @@ Examples:
                        help='Number of edges to attach for Barabási-Albert networks (default: 2)')
     parser.add_argument('--network_file', type=str, default='../data/facebook_combined.txt',
                        help='Path to Facebook edge list file (default: ../data/facebook_combined.txt)')
-    parser.add_argument('--num_groups', type=int, default=5,
-                       help='Number of groups for visualization (default: 5)')
     parser.add_argument('--seed', type=int, default=42,
                        help='Random seed for reproducibility (default: 42)')
     parser.add_argument('--save_network', action='store_true',
@@ -225,7 +142,6 @@ Examples:
         sampling_method=args.sampling_method,
         m=args.m,
         network_file=args.network_file,
-        num_groups=args.num_groups,
         seed=args.seed,
         save_network=args.save_network
     )

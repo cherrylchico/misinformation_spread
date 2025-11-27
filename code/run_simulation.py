@@ -21,14 +21,14 @@ Examples:
   python run_simulation.py
   
   # Run with specific config file
-  python run_simulation.py --config config_generate_network.json
+  python run_simulation.py --config config/config_generate_network.json
   
   # Run with Facebook config
-  python run_simulation.py --config config_facebook.json
+  python run_simulation.py --config config/config_facebook.json
 """
     )
-    parser.add_argument('--config', type=str, default='config.json',
-                       help='Path to configuration JSON file (default: config.json)')
+    parser.add_argument('--config', type=str, default='config/config.json',
+                       help='Path to configuration JSON file (default: config/config.json)')
     
     args = parser.parse_args()
     
