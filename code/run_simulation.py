@@ -92,11 +92,11 @@ Examples:
     # Show metrics over time
     sim.plot_metrics(save_path=os.path.join(output_dir, 'metrics.png'))
     
-    # Create animated GIF of diffusion
-    # print("\nCreating animated GIF of diffusion...")
-    # sim.create_diffusion_gif(results, 
-    #                         save_path=os.path.join(output_dir, 'diffusion_animation.gif'), 
-    #                         fps=1)
+    #Create animated GIF of diffusion
+    print("\nCreating animated GIF of diffusion...")
+    sim.create_diffusion_gif(results, 
+                            save_path=os.path.join(output_dir, 'diffusion_animation.gif'), 
+                            fps=1)
     
     print("\n" + "="*60)
     print("SIMULATION SUMMARY")

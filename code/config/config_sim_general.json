@@ -1,10 +1,10 @@
 {
     "network_pickle_file": "data/facebook_community_100nodes_seed42.pkl",
-    "num_rounds": 10,
+    "num_rounds": 100,
     "num_initial_senders": 10,
     "message": {
         "left_bias": 0.5,
         "right_bias": 0.5,
-        "prob_truth": 1.0
+        "prob_truth": 0.6
     }
 }

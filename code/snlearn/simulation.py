@@ -149,6 +149,7 @@ class Simulation:
             'reach': [],
             'forwarding_rate': [],
             'misinformation_contamination': [],
+            'average_reputation': [],
             'reputation_by_type': []
         }
     
@@ -291,6 +292,10 @@ class Simulation:
         self.history['reach'].append(reach)
         self.history['forwarding_rate'].append(forwarding_rate)
         self.history['misinformation_contamination'].append(misinformation_contamination)
+        
+        # Store average reputation after this round
+        avg_reputation = np.mean([agent.reputation for agent in self.agents])
+        self.history['average_reputation'].append(avg_reputation)
         
         return {
             'message': message,
@@ -534,9 +539,7 @@ class Simulation:
         axes[1, 0].set_ylim([0, 1.1])
         
         # Average reputation
-        avg_reputation = [np.mean([agent.reputation for agent in self.agents]) 
-                         for _ in rounds]
-        axes[1, 1].plot(rounds, avg_reputation, marker='d', color='green', linewidth=2)
+        axes[1, 1].plot(rounds, self.history['average_reputation'], marker='d', color='green', linewidth=2)
         axes[1, 1].set_title('Average Agent Reputation', fontsize=12, fontweight='bold')
         axes[1, 1].set_xlabel('Round')
         axes[1, 1].set_ylabel('Average Reputation')
