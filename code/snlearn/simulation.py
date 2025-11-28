@@ -13,61 +13,94 @@ from snlearn.agent import Agent
 from snlearn.message import Message
 from typing import List, Dict
 import json
-
+import pickle
+import os
 
 class Simulation:
-    def __init__(self, config_file=None, **kwargs):
+    def __init__(self, config_sim, config_agent, config_influencer=None, config_bot=None):
         """
         Initialize the simulation
         
         Args:
-            config_file: path to JSON file with configurations
-            **kwargs: configuration parameters (overrides config_file)
+            config_sim: dict or path to JSON file with simulation-level configurations
+                       Required keys: 'network_pickle_file', 'num_rounds'
+                       Optional keys: 'message' (dict with left_bias, right_bias, prob_truth),
+                                     'num_initial_senders' (number of initial senders, default=3)
+                       
+            config_agent: dict with agent configuration (used for regular agents)
+                         Required keys: 'count' (None = all remaining agents)
+                         Optional keys: all agent parameters (left_bias, right_bias, ave_reputation, etc.)
+                         
+            config_influencer: dict with influencer configuration (optional)
+                              If None, no influencers in simulation
+                              Required keys: 'count'
+                              Optional keys: all agent parameters
+                              
+            config_bot: dict with bot configuration (optional)
+                       If None, no bots in simulation
+                       Required keys: 'count'
+                       Optional keys: all agent parameters
+        
+        Example:
+            config_sim = {
+                'network_pickle_file': 'networks/facebook_network.pkl',
+                'num_rounds': 10,
+                'num_initial_senders': 3,
+                'message': {'left_bias': 0.5, 'right_bias': 0.5, 'prob_truth': 0.5}
+            }
+            
+            config_agent = {
+                'count': None,
+                'ave_reputation': 0.0,
+                'variance_reputation': 1.0,
+                'bias_strength': 0.5,
+                'reputation_reward_strength': 0.5,
+                'reputation_penalty_strength': 0.5,
+                'forwarding_cost': 0.1
+            }
+            
+            config_influencer = {
+                'count': 3,
+                'ave_reputation': 1.0,
+                'variance_reputation': 1.0,
+                'bias_strength': 1.0,
+                'reputation_reward_strength': 1.0,
+                'reputation_penalty_strength': 1.0,
+                'forwarding_cost': 0.1
+            }
+            
+            sim = Simulation(config_sim, config_agent, config_influencer)
         """
-        if config_file:
-            with open(config_file, 'r') as f:
-                self.config = json.load(f)
+        # Load simulation config from file or use dict
+        if isinstance(config_sim, str):
+            with open(config_sim, 'r') as f:
+                self.config_sim = json.load(f)
         else:
-            self.config = kwargs if kwargs else self._default_config()
+            self.config_sim = config_sim
+        
+        # Store agent configurations
+        self.regular_config = config_agent if config_agent else self._default_regular_config()
+        self.influencer_config = config_influencer
+        self.bot_config = config_bot
         
         # Network parameters
-        self.network_pickle_file = self.config.get('network_pickle_file', None)  # Path to saved network pickle (required)
-        
-        # Agent distribution: [num_influencers, num_regular, num_bots]
-        self.agent_distribution = self.config.get('agent_distribution', [3, None, 0])  # None for regular = remaining agents
+        self.network_pickle_file = self.config_sim.get('network_pickle_file', None)
         
         # Message parameters
-        # Note: left_bias=0.5, right_bias=0.5 creates a bipolar/U-shaped distribution (messages at extremes)
-        self.message_left_bias = self.config.get('message_left_bias', 0.5)
-        self.message_right_bias = self.config.get('message_right_bias', 0.5)
-        self.prob_truth = self.config.get('prob_truth', 0.5)
-        
-        # Agent parameters - high_reputation type (care more)
-        self.high_rep_count = self.config.get('high_rep_count', 3)
-        self.high_rep_reward = self.config.get('high_rep_reward', 1.0)
-        self.high_rep_penalty = self.config.get('high_rep_penalty', 1.0)
-        
-        # Agent parameters - low_reputation type (don't care much)
-        self.low_rep_reward = self.config.get('low_rep_reward', 0.5)
-        self.low_rep_penalty = self.config.get('low_rep_penalty', 0.5)
-        
-        # Common agent parameters
-        self.agent_left_bias = self.config.get('agent_left_bias', 2.0)
-        self.agent_right_bias = self.config.get('agent_right_bias', 2.0)
-        self.ave_reputation = self.config.get('ave_reputation', 0.0)
-        self.variance_reputation = self.config.get('variance_reputation', 1.0)
-        self.bias_strength = self.config.get('bias_strength', 0.3)
-        self.forwarding_cost = self.config.get('forwarding_cost', 0.1)
+        message_config = self.config_sim.get('message', {})
+        self.message_left_bias = message_config.get('left_bias', 0.5)
+        self.message_right_bias = message_config.get('right_bias', 0.5)
+        self.prob_truth = message_config.get('prob_truth', 0.5)
         
         # Simulation parameters
-        self.num_rounds = self.config.get('num_rounds', 10)
+        self.num_rounds = self.config_sim.get('num_rounds', 10)
+        self.num_initial_senders = self.config_sim.get('num_initial_senders', 3)
         
         # Load network from pickle file
         if self.network_pickle_file is None:
             raise ValueError("network_pickle_file is required. Use create_network.py to generate a network first.")
         
-        import pickle
-        import os
+
         if not os.path.exists(self.network_pickle_file):
             raise FileNotFoundError(f"Network pickle file not found: {self.network_pickle_file}")
         
@@ -80,10 +113,10 @@ class Simulation:
         self.network_type = self.network.network_type
         print(f"Loaded {self.network_type} network with {self.num_agents} agents")
         
-        # Parse agent distribution
-        num_influencers = self.agent_distribution[0]
-        num_bots = self.agent_distribution[2]
-        num_regular = self.agent_distribution[1]
+        # Determine agent counts
+        num_influencers = self.influencer_config.get('count', 0) if self.influencer_config else 0
+        num_bots = self.bot_config.get('count', 0) if self.bot_config else 0
+        num_regular = self.regular_config.get('count', None)
         
         # If num_regular is None, it takes remaining agents
         if num_regular is None:
@@ -91,7 +124,7 @@ class Simulation:
         
         # Validate distribution
         if num_influencers + num_regular + num_bots != self.num_agents:
-            raise ValueError(f"Agent distribution [{num_influencers}, {num_regular}, {num_bots}] "
+            raise ValueError(f"Agent distribution [influencers={num_influencers}, regular={num_regular}, bots={num_bots}] "
                            f"does not sum to total agents ({self.num_agents})")
         
         # Store counts
@@ -100,8 +133,14 @@ class Simulation:
         self.num_bots = num_bots
         
         # Determine influencers - use top nodes by degree
-        self.influencers = self.network.get_top_degree_nodes(self.num_influencers)
-        self.initial_senders = self.influencers
+        if self.num_influencers > 0:
+            self.influencers = self.network.get_top_degree_nodes(self.num_influencers)
+        else:
+            self.influencers = []
+        
+        # Initial senders are always the top degree nodes, regardless of influencer status
+        self.initial_senders = self.network.get_top_degree_nodes(self.num_initial_senders)
+        
         print(f"Agent distribution: {self.num_influencers} influencers, {self.num_regular} regular, {self.num_bots} bots")
         
         self.agents = self._create_agents()
@@ -112,28 +151,19 @@ class Simulation:
             'misinformation_contamination': [],
             'reputation_by_type': []
         }
-        
-    def _default_config(self):
-        """Default configuration - requires a network pickle file"""
+    
+    def _default_regular_config(self):
+        """Default configuration for regular agents"""
         return {
-            'network_pickle_file': None,  # Must be provided
-            'agent_distribution': [3, None, 0],  # [num_influencers, num_regular, num_bots]; None = remaining
-            'message_left_bias': 0.5,  # Beta distribution: 0.5 creates bipolar messages (extreme left/right)
-            'message_right_bias': 0.5,
-            'prob_truth': 0.5,
-            'agent_left_bias': 2.0,
-            'agent_right_bias': 2.0,
+            'count': None,
+            'left_bias': 0.5,
+            'right_bias': 0.5,
             'ave_reputation': 0.0,
             'variance_reputation': 1.0,
-            'bias_strength': 0.3,
-            'high_rep_count': 3,
-            'high_rep_reward': 1.0,
-            'high_rep_penalty': 1.0,
-            'low_rep_reward': 0.5,
-            'low_rep_penalty': 0.5,
-            'forwarding_cost': 0.1,
-            'num_rounds': 10,
-            'seed': 42
+            'bias_strength': 0.5,
+            'reputation_reward_strength': 0.5,
+            'reputation_penalty_strength': 0.5,
+            'forwarding_cost': 0.1
         }
     
     def _create_agents(self):
@@ -144,121 +174,48 @@ class Simulation:
         # Determine which nodes are bots (last num_bots nodes)
         bot_nodes = set(range(self.num_agents - self.num_bots, self.num_agents))
         
-        # Split influencers into left-leaning and right-leaning
-        influencer_list = list(self.influencers)
-        half_influencers = len(influencer_list) // 2
-        left_leaning_influencers = set(influencer_list[:half_influencers])
-        right_leaning_influencers = set(influencer_list[half_influencers:])
-        
-        # Determine which regular agents are connected to left/right influencers
-        left_connected_regular = set()
-        right_connected_regular = set()
-        
-        for node in range(self.num_agents):
-            if node not in influencer_set and node not in bot_nodes:
-                neighbors = set(self.network.get_neighbors(node))
-                has_left_connection = bool(neighbors & left_leaning_influencers)
-                has_right_connection = bool(neighbors & right_leaning_influencers)
-                
-                # If connected to both, set to neutral (skip adding to either set)
-                if has_left_connection and has_right_connection:
-                    continue
-                # Check if connected to only left-leaning influencers
-                elif has_left_connection:
-                    left_connected_regular.add(node)
-                # Check if connected to only right-leaning influencers
-                elif has_right_connection:
-                    right_connected_regular.add(node)
-        
         for i in range(self.num_agents):
-            if i in left_leaning_influencers:
-                # Left-leaning influencer agents
+            if i in influencer_set and self.influencer_config:
+                # Influencer agents
                 agent = Agent(
-                    left_bias=2.0,
-                    right_bias=5.0,
-                    ave_reputation=self.ave_reputation,
-                    variance_reputation=self.variance_reputation,
-                    bias_strength=self.bias_strength,
-                    reputation_reward_strength=self.high_rep_reward,
-                    reputation_penalty_strength=self.high_rep_penalty,
-                    forwarding_cost=self.forwarding_cost,
+                    left_bias=self.influencer_config.get('left_bias', 0.5),
+                    right_bias=self.influencer_config.get('right_bias', 0.5),
+                    ave_reputation=self.influencer_config.get('ave_reputation', 1.0),
+                    variance_reputation=self.influencer_config.get('variance_reputation', 1.0),
+                    bias_strength=self.influencer_config.get('bias_strength', 1.0),
+                    reputation_reward_strength=self.influencer_config.get('reputation_reward_strength', 1.0),
+                    reputation_penalty_strength=self.influencer_config.get('reputation_penalty_strength', 1.0),
+                    forwarding_cost=self.influencer_config.get('forwarding_cost', 0.1),
                     agent_type='high_reputation',
-                    type='influencer',
-                    bias='left'
+                    type='influencer'
                 )
-            elif i in right_leaning_influencers:
-                # Right-leaning influencer agents
+            elif i in bot_nodes and self.bot_config:
+                # Bot agents
                 agent = Agent(
-                    left_bias=5.0,
-                    right_bias=2.0,
-                    ave_reputation=self.ave_reputation,
-                    variance_reputation=self.variance_reputation,
-                    bias_strength=self.bias_strength,
-                    reputation_reward_strength=self.high_rep_reward,
-                    reputation_penalty_strength=self.high_rep_penalty,
-                    forwarding_cost=self.forwarding_cost,
-                    agent_type='high_reputation',
-                    type='influencer',
-                    bias='right'
-                )
-            elif i in bot_nodes:
-                # Bot agents with bipolar bias distribution
-                agent = Agent(
-                    left_bias=0.5,
-                    right_bias=0.5,
-                    ave_reputation=self.ave_reputation,
-                    variance_reputation=self.variance_reputation,
-                    bias_strength=self.bias_strength,
-                    reputation_reward_strength=self.low_rep_reward,
-                    reputation_penalty_strength=self.low_rep_penalty,
-                    forwarding_cost=self.forwarding_cost,
+                    left_bias=self.bot_config.get('left_bias', 0.5),
+                    right_bias=self.bot_config.get('right_bias', 0.5),
+                    ave_reputation=self.bot_config.get('ave_reputation', 0.0),
+                    variance_reputation=self.bot_config.get('variance_reputation', 1.0),
+                    bias_strength=self.bot_config.get('bias_strength', 1.0),
+                    reputation_reward_strength=self.bot_config.get('reputation_reward_strength', 0.0),
+                    reputation_penalty_strength=self.bot_config.get('reputation_penalty_strength', 0.0),
+                    forwarding_cost=self.bot_config.get('forwarding_cost', 0.1),
                     agent_type='bot',
                     type='bot'
                 )
-            elif i in left_connected_regular:
-                # Regular agents connected to left-leaning influencers
-                agent = Agent(
-                    left_bias=2.0,
-                    right_bias=5.0,
-                    ave_reputation=self.ave_reputation,
-                    variance_reputation=self.variance_reputation,
-                    bias_strength=self.bias_strength,
-                    reputation_reward_strength=self.low_rep_reward,
-                    reputation_penalty_strength=self.low_rep_penalty,
-                    forwarding_cost=self.forwarding_cost,
-                    agent_type='low_reputation',
-                    type='regular',
-                    bias='left'
-                )
-            elif i in right_connected_regular:
-                # Regular agents connected to right-leaning influencers
-                agent = Agent(
-                    left_bias=5.0,
-                    right_bias=2.0,
-                    ave_reputation=self.ave_reputation,
-                    variance_reputation=self.variance_reputation,
-                    bias_strength=self.bias_strength,
-                    reputation_reward_strength=self.low_rep_reward,
-                    reputation_penalty_strength=self.low_rep_penalty,
-                    forwarding_cost=self.forwarding_cost,
-                    agent_type='low_reputation',
-                    type='regular',
-                    bias='right'
-                )
             else:
-                # Regular agents not connected to any influencers (neutral)
+                # Regular agents
                 agent = Agent(
-                    left_bias=5.0,
-                    right_bias=5.0,
-                    ave_reputation=self.ave_reputation,
-                    variance_reputation=self.variance_reputation,
-                    bias_strength=self.bias_strength,
-                    reputation_reward_strength=self.low_rep_reward,
-                    reputation_penalty_strength=self.low_rep_penalty,
-                    forwarding_cost=self.forwarding_cost,
+                    left_bias=self.regular_config.get('left_bias', 0.5),
+                    right_bias=self.regular_config.get('right_bias', 0.5),
+                    ave_reputation=self.regular_config.get('ave_reputation', 0.0),
+                    variance_reputation=self.regular_config.get('variance_reputation', 1.0),
+                    bias_strength=self.regular_config.get('bias_strength', 0.5),
+                    reputation_reward_strength=self.regular_config.get('reputation_reward_strength', 0.5),
+                    reputation_penalty_strength=self.regular_config.get('reputation_penalty_strength', 0.5),
+                    forwarding_cost=self.regular_config.get('forwarding_cost', 0.1),
                     agent_type='low_reputation',
-                    type='regular',
-                    bias='neutral'
+                    type='regular'
                 )
             agents.append(agent)
         return agents
@@ -347,119 +304,108 @@ class Simulation:
     def run(self):
         """Run the entire simulation"""
         print(f"Starting simulation with {self.num_agents} agents and {self.num_rounds} rounds...")
+        
+        # Track initial reputation (round 0)
+        initial_reputation = np.mean([agent.reputation for agent in self.agents])
+        print(f"Round 0: Initial Average Reputation={initial_reputation:.4f}")
+        
         results = []
         for round_num in range(self.num_rounds):
             result = self.run_round(round_num)
             results.append(result)
+            
+            # Calculate average reputation after this round
+            avg_reputation = np.mean([agent.reputation for agent in self.agents])
+            
             print(f"Round {round_num + 1}: Reach={result['reach']:.2%}, "
                   f"Forwarding={result['forwarding_rate']:.2%}, "
                   f"Misinfo={result['misinformation_contamination']:.2%}, "
-                  f"Truth={result['message'].truth}")
+                  f"Truth={result['message'].truth}, "
+                  f"Avg Reputation={avg_reputation:.4f}")
         return results
     
     def visualize_network(self, round_result=None, save_path=None):
-        """Visualize the network and message diffusion"""
-        # Compute group assignments if not already done
-        if self.network.group_assignments is None:
-            self.network.compute_group_assignments()
+        """Visualize the network and message diffusion using draw_network"""
+        from .draw_network import draw_network
+        import os
         
-        G = self.network.graph
-        # Use network's seed for consistent layout
-        pos = nx.spring_layout(G, seed=self.network.seed, k=0.5, iterations=50)
+        # Determine base path for saving
+        if save_path:
+            base_path = os.path.splitext(save_path)[0]
+        else:
+            base_path = None
         
-        fig, axes = plt.subplots(1, 2, figsize=(16, 8))
+        # 1. Political Bias visualization
+        bias_colors = {i: self.agents[i].bias for i in range(self.num_agents)}
+        bias_save_path = f"{base_path}_political_bias.png" if base_path else None
+        draw_network(
+            self.network,
+            seed=self.network.seed,
+            save_path=bias_save_path,
+            title='Political Bias (Blue=Left, Red=Right)',
+            figsize=(14, 10),
+            color_by='bias',
+            node_colors_dict=bias_colors,
+            colormap='RdBu_r',
+            label_nodes=self.initial_senders
+        )
+        plt.close()
         
-        # Subplot 1: Network with colors by group
-        ax1 = axes[0]
-        num_communities = len(set(self.network.group_assignments))
-        colors = plt.cm.Set3(np.linspace(0, 1, num_communities))
-        node_colors = [colors[self.network.group_assignments[i] % len(colors)] 
-                      for i in range(self.num_agents)]
+        # 2. Initial Reputation visualization
+        reputation_colors = {i: self.agents[i].baseline_reputation for i in range(self.num_agents)}
+        rep_save_path = f"{base_path}_initial_reputation.png" if base_path else None
+        draw_network(
+            self.network,
+            seed=self.network.seed,
+            save_path=rep_save_path,
+            title='Initial Reputation (Purple=Low, Yellow=High)',
+            figsize=(14, 10),
+            color_by='reputation',
+            node_colors_dict=reputation_colors,
+            colormap='viridis',
+            label_nodes=self.initial_senders
+        )
+        plt.close()
         
-        nx.draw_networkx_nodes(G, pos, node_color=node_colors, 
-                              node_size=300, ax=ax1, alpha=0.8)
-        nx.draw_networkx_edges(G, pos, alpha=0.3, arrows=True, 
-                              arrowsize=10, ax=ax1, edge_color='gray')
-        nx.draw_networkx_labels(G, pos, font_size=8, ax=ax1)
-        ax1.set_title('Social Network Structure\n(Colors indicate groups)', fontsize=12)
-        ax1.axis('off')
-        
-        # Subplot 2: Message diffusion (if round_result provided)
-        ax2 = axes[1]
+        # 3. Message Diffusion visualization (if round_result provided)
         if round_result:
             message = round_result['message']
             received = round_result['received']
             forwarded = round_result['forwarded']
             
-            # Node colors based on type and state
-            node_colors_diff = []
-            node_sizes = []
-            influencer_set = set(self.influencers)
-            
+            # Map agents to diffusion state: 0=not reached, 1=received, 2=forwarded
+            diffusion_colors = {}
             for i in range(self.num_agents):
-                if i in influencer_set:
-                    # High_reputation agents (influencers) - larger
-                    base_size = 500
-                    if i in forwarded:
-                        node_colors_diff.append('darkred')  # Forwarded
-                    elif i in received:
-                        node_colors_diff.append('darkorange')  # Received but didn't forward
-                    else:
-                        node_colors_diff.append('lightblue')  # Didn't receive
+                if i in forwarded:
+                    diffusion_colors[i] = 2  # Forwarded
+                elif i in received:
+                    diffusion_colors[i] = 1  # Received but didn't forward
                 else:
-                    # Low_reputation agents (regular) - smaller
-                    base_size = 300
-                    if i in forwarded:
-                        node_colors_diff.append('red')  # Forwarded
-                    elif i in received:
-                        node_colors_diff.append('orange')  # Received but didn't forward
-                    else:
-                        node_colors_diff.append('lightgray')  # Didn't receive
-                node_sizes.append(base_size)
-            
-            nx.draw_networkx_nodes(G, pos, node_color=node_colors_diff, 
-                                  node_size=node_sizes, ax=ax2, alpha=0.8)
-            nx.draw_networkx_edges(G, pos, alpha=0.2, arrows=True, 
-                                  arrowsize=10, ax=ax2, edge_color='gray')
-            
-            # Highlight diffusion edges
-            if forwarded:
-                diffusion_edges = []
-                for sender in forwarded:
-                    neighbors = self.network.get_neighbors(sender)
-                    for neighbor in neighbors:
-                        if neighbor in received:
-                            diffusion_edges.append((sender, neighbor))
-                
-                if diffusion_edges:
-                    nx.draw_networkx_edges(G, pos, edgelist=diffusion_edges,
-                                          edge_color='red', width=2, alpha=0.6,
-                                          arrows=True, arrowsize=15, ax=ax2)
-            
-            nx.draw_networkx_labels(G, pos, font_size=8, ax=ax2)
+                    diffusion_colors[i] = 0  # Didn't receive
             
             truth_str = "True" if message.truth == 1 else "False"
-            truth_color = 'green' if message.truth == 1 else 'red'
-            ax2.set_title(f'Message Diffusion (Round)\n'
-                         f'Truth: {truth_str} | '
-                         f'Reach: {round_result["reach"]:.1%} | '
-                         f'Forwarding Rate: {round_result["forwarding_rate"]:.1%}\n'
-                         f'Blue: Influencers (care more) | Gray: Regular users',
-                         fontsize=12, color=truth_color)
-        else:
-            nx.draw_networkx_nodes(G, pos, node_color=node_colors, 
-                                  node_size=300, ax=ax2, alpha=0.8)
-            nx.draw_networkx_edges(G, pos, alpha=0.3, arrows=True, 
-                                  arrowsize=10, ax=ax2, edge_color='gray')
-            nx.draw_networkx_labels(G, pos, font_size=8, ax=ax2)
-            ax2.set_title('Social Network', fontsize=12)
-        
-        ax2.axis('off')
-        
-        plt.tight_layout()
-        if save_path:
-            plt.savefig(save_path, dpi=150, bbox_inches='tight')
-        plt.show()
+            diffusion_title = f'Message Diffusion - Truth: {truth_str}'
+            diffusion_save_path = f"{base_path}_message_diffusion.png" if base_path else None
+            
+            legend_labels = {
+                0: 'Not Reached',
+                1: 'Received, Not Forwarded',
+                2: 'Forwarded'
+            }
+            
+            draw_network(
+                self.network,
+                seed=self.network.seed,
+                save_path=diffusion_save_path,
+                title=diffusion_title,
+                figsize=(14, 10),
+                color_by='diffusion',
+                node_colors_dict=diffusion_colors,
+                colormap='RdYlGn',
+                legend_labels=legend_labels,
+                label_nodes=self.initial_senders
+            )
+            plt.close()
     
     def create_diffusion_gif(self, results, save_path='diffusion_animation.gif', fps=1):
         """Create an animated GIF showing diffusion in each round"""
@@ -556,7 +502,7 @@ class Simulation:
         plt.close()
     
     def plot_metrics(self, save_path=None):
-        """Plot metrics over time"""
+        """Plot metrics over time and always save to file"""
         fig, axes = plt.subplots(2, 2, figsize=(14, 10))
         
         rounds = range(1, len(self.history['reach']) + 1)
@@ -597,6 +543,8 @@ class Simulation:
         axes[1, 1].grid(True, alpha=0.3)
         
         plt.tight_layout()
-        if save_path:
-            plt.savefig(save_path, dpi=150, bbox_inches='tight')
-        plt.show()
+        # Always save, use default filename if not provided
+        if save_path is None:
+            save_path = "simulation_metrics.png"
+        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        plt.close()

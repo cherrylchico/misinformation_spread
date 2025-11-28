@@ -1,0 +1,11 @@
+{
+    "count": 3,
+    "left_bias": 0.5,
+    "right_bias": 0.5,
+    "ave_reputation": 1.0,
+    "variance_reputation": 1.0,
+    "bias_strength": 1.0,
+    "reputation_reward_strength": 1.0,
+    "reputation_penalty_strength": 1.0,
+    "forwarding_cost": 0.1
+}
