@@ -58,7 +58,7 @@ def visualize_network(num_agents,
     print("Generating visualization...")
     
     # Create filename based on parameters
-    figures_dir = '../figures'
+    figures_dir = 'figures'
     filename = f'{network_type}_{sampling_method or "default"}_{num_agents}nodes.png'
     output_path = os.path.join(figures_dir, filename)
     
@@ -68,7 +68,7 @@ def visualize_network(num_agents,
     # Save network to data folder if requested
     if save_network:
         import pickle
-        data_dir = '../data'
+        data_dir = 'data'
         os.makedirs(data_dir, exist_ok=True)
         
         # Create filename for network
@@ -117,6 +117,7 @@ Examples:
     # Required positional arguments
     parser.add_argument('num_agents', type=int,
                        help='Number of agents to sample from the network')
+    
     parser.add_argument('network_type', type=str, choices=['facebook', 'barabasi'],
                        help='Type of network to create: facebook or barabasi')
     
