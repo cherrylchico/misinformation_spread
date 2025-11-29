@@ -1,14 +1,8 @@
 {
-  "network_type": "facebook",
-  "network_file": "../data/facebook_combined.txt",
-  "num_agents": 100,
-  "prob_in": 0.6,
-  "prob_out": 0.1,
-  "num_groups": 4,
-  "ba_m": 2,
-  "use_top_degree_influencers": true,
-  "message_left_bias": 2.0,
-  "message_right_bias": 2.0,
+  "network_pickle_file": "../data/facebook_community_100nodes_seed42.pkl",
+  "agent_distribution": [3, null, 0],
+  "message_left_bias": 0.5,
+  "message_right_bias": 0.5,
   "prob_truth": 0.8,
   "agent_left_bias": 2.0,
   "agent_right_bias": 2.0,
@@ -24,4 +18,3 @@
   "num_rounds": 10,
   "seed": 42
 }
-

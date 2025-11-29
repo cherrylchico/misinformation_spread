@@ -17,3 +17,18 @@ __pycache__/
 
 # Ignore virtual environment directories
 venv/
+.venv/
+
+
+# Keep README files
+!figures/README.md
+!data/README.md
+
+# Ignore test outputs
+tests/output/
+tests/*.png
+tests/*.pkl
+
+#ignore egg info files
+*.egg-info/
+*.egg

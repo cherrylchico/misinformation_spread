@@ -1,0 +1,21 @@
+{
+  "network_pickle_file": "../data/facebook_network.pkl",
+  "agent_distribution": [3, null, 0],
+  "message_left_bias": 0.5,
+  "message_right_bias": 0.5,
+  "prob_truth": 0.8,
+  "agent_left_bias": 2.0,
+  "agent_right_bias": 2.0,
+  "ave_reputation": 0.0,
+  "variance_reputation": 1.0,
+  "bias_strength": 0.3,
+  "high_rep_count": 3,
+  "high_rep_reward": 1.0,
+  "high_rep_penalty": 1.0,
+  "low_rep_reward": 0.5,
+  "low_rep_penalty": 0.5,
+  "forwarding_cost": 0.1,
+  "num_rounds": 10,
+  "seed": 42
+}
+
