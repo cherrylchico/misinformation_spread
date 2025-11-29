@@ -8,6 +8,7 @@ import os
 import argparse
 import json
 from snlearn.simulation import Simulation
+from snlearn.output_manager import OutputManager
 
 
 def main():
@@ -42,8 +43,6 @@ Examples:
                        help='Path to influencer config JSON file (optional)')
     parser.add_argument('--config-bot', type=str, default=None,
                        help='Path to bot config JSON file (optional)')
-    parser.add_argument('--output-dir', type=str, default='figures',
-                       help='Directory to save output figures (default: figures)')
     
     args = parser.parse_args()
     
@@ -80,9 +79,9 @@ Examples:
     # Visualizations
     print("\nGenerating visualizations...")
     
-    # Create output directory if it doesn't exist
-    output_dir = args.output_dir
-    os.makedirs(output_dir, exist_ok=True)
+    # Create timestamped output directory
+    output_dir = OutputManager.create_output_dir()
+    print(f"Output directory: {output_dir}")
     
     # Show diffusion of the last round
     if results:
@@ -108,8 +107,11 @@ Examples:
     print(f"\nAverage reach: {np.mean(sim.history['reach']):.2%}")
     print(f"Average forwarding rate: {np.mean(sim.history['forwarding_rate']):.2%}")
     print(f"Average misinformation contamination: {np.mean(sim.history['misinformation_contamination']):.2%}")
-    print(f"\nGenerated files in {output_dir}/:")
-    print(f"  - network_diffusion.png")
+    print(f"\nAll outputs saved to: {output_dir}")
+    print(f"Generated files:")
+    print(f"  - network_diffusion_political_bias.png")
+    print(f"  - network_diffusion_initial_reputation.png")
+    print(f"  - network_diffusion_message_diffusion.png")
     print(f"  - metrics.png")
     print(f"  - diffusion_animation.gif")
     print("="*60)

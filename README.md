@@ -34,8 +34,7 @@ Use the main simulation script to run experiments. You can specify different age
 ```sh
 uv run python code/run_simulation.py \
   --config-sim code/config/config_sim_general.json \
-  --config-agent code/config/config_sim_agent.json \
-  --output-dir figures
+  --config-agent code/config/config_sim_agent.json
 ```
 
 ### With Influencers
@@ -43,8 +42,7 @@ uv run python code/run_simulation.py \
 uv run python code/run_simulation.py \
   --config-sim code/config/config_sim_general.json \
   --config-agent code/config/config_sim_agent.json \
-  --config-influencer code/config/config_sim_influencer.json \
-  --output-dir figures
+  --config-influencer code/config/config_sim_influencer.json
 ```
 
 ### With Influencers and Bots
@@ -53,16 +51,17 @@ uv run python code/run_simulation.py \
   --config-sim code/config/config_sim_general.json \
   --config-agent code/config/config_sim_agent.json \
   --config-influencer code/config/config_sim_influencer.json \
-  --config-bot code/config/config_sim_bot.json \
-  --output-dir figures
+  --config-bot code/config/config_sim_bot.json
 ```
 
 ## 4. Output
 
-Simulation results and visualizations will be saved in the `figures/` directory. This includes:
+Simulation results and visualizations are automatically saved in timestamped directories under `output/`. Each run creates a new folder with the format `output/YYYYMMDD_HHMMSS_output/` containing:
 - Network visualizations (political bias, initial reputation, message diffusion)
 - Metrics plots (reach, forwarding rate, misinformation contamination, reputation)
-- Optional animated GIF of message diffusion
+- Animated GIF of message diffusion
+
+Example output directory: `output/20251129_164513_output/`
 
 ## 5. Configuration
 
