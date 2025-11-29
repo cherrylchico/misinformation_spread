@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from snlearn.socialnetwork import SocialNetwork
 from snlearn.draw_network import draw_network, print_community_statistics
+from snlearn.output_manager import OutputManager
 import os
 import argparse
 
@@ -57,10 +58,11 @@ def visualize_network(num_agents,
     # Create visualization using draw_network module
     print("Generating visualization...")
     
-    # Create filename based on parameters
-    figures_dir = 'figures'
+    # Create timestamped output directory
+    output_dir = OutputManager.create_output_dir()
     filename = f'{network_type}_{sampling_method or "default"}_{num_agents}nodes.png'
-    output_path = os.path.join(figures_dir, filename)
+    output_path = os.path.join(output_dir, filename)
+    print(f"Output directory: {output_dir}")
     
     # Draw the network
     fig, ax = draw_network(network, seed=seed, save_path=output_path)
