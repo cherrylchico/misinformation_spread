@@ -19,6 +19,8 @@ __pycache__/
 venv/
 .venv/
 
+output/
+
 
 # Keep README files
 !figures/README.md

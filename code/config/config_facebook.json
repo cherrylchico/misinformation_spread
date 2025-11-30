@@ -1,9 +1,13 @@
 {
   "network_pickle_file": "../data/facebook_network.pkl",
-  "agent_distribution": [3, null, 0],
+  "agent_distribution": [
+    3,
+    null,
+    0
+  ],
   "message_left_bias": 0.5,
   "message_right_bias": 0.5,
-  "prob_truth": 0.8,
+  "prob_truth": 0.1,
   "agent_left_bias": 2.0,
   "agent_right_bias": 2.0,
   "ave_reputation": 0.0,
@@ -18,4 +22,3 @@
   "num_rounds": 10,
   "seed": 42
 }
-

@@ -51,7 +51,20 @@ uv run python code/run_simulation.py \
   --config-sim code/config/config_sim_general.json \
   --config-agent code/config/config_sim_agent.json \
   --config-influencer code/config/config_sim_influencer.json \
-  --config-bot code/config/config_sim_bot.json
+  --config-bot code/config/config_sim_bot.json \
+  --no-gif \
+  --seed 42
+```
+
+### Additional Options
+
+- `--no-gif`: Skip GIF generation to save time (useful for quick test runs)
+
+```sh
+uv run python code/run_simulation.py \
+  --config-sim code/config/config_sim_general.json \
+  --config-agent code/config/config_sim_agent.json \
+  --no-gif
 ```
 
 ## 4. Output
@@ -59,7 +72,7 @@ uv run python code/run_simulation.py \
 Simulation results and visualizations are automatically saved in timestamped directories under `output/`. Each run creates a new folder with the format `output/YYYYMMDD_HHMMSS_output/` containing:
 - Network visualizations (political bias, initial reputation, message diffusion)
 - Metrics plots (reach, forwarding rate, misinformation contamination, reputation)
-- Animated GIF of message diffusion
+- Animated GIF of message diffusion (optional, skip with `--no-gif`)
 
 Example output directory: `output/20251129_164513_output/`
 
@@ -67,3 +80,16 @@ Example output directory: `output/20251129_164513_output/`
 
 Edit the JSON files in `code/config/` to customize agent, influencer, bot, and simulation parameters.
 
+
+# Reproducibility
+
+By default, each simulation run uses random sampling, resulting in different outcomes. To get reproducible results:
+
+```sh
+uv run python code/run_simulation.py \
+  --config-sim code/config/config_sim_general.json \
+  --config-agent code/config/config_sim_agent.json \
+  --seed 42
+```
+
+The `--seed` option sets the random seed, ensuring identical results across runs with the same parameters.

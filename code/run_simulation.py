@@ -43,8 +43,17 @@ Examples:
                        help='Path to influencer config JSON file (optional)')
     parser.add_argument('--config-bot', type=str, default=None,
                        help='Path to bot config JSON file (optional)')
+    parser.add_argument('--no-gif', action='store_true',
+                       help='Skip GIF generation (saves time for quick runs)')
+    parser.add_argument('--seed', type=int, default=None,
+                       help='Random seed for reproducibility (optional, default: random)')
     
     args = parser.parse_args()
+    
+    # Set random seed if provided
+    if args.seed is not None:
+        np.random.seed(args.seed)
+        print(f"Random seed set to: {args.seed}")
     
     # Load simulation config (can be path or will be loaded in Simulation class)
     config_sim = args.config_sim
@@ -91,11 +100,14 @@ Examples:
     # Show metrics over time
     sim.plot_metrics(save_path=os.path.join(output_dir, 'metrics.png'))
     
-    #Create animated GIF of diffusion
-    print("\nCreating animated GIF of diffusion...")
-    sim.create_diffusion_gif(results, 
-                            save_path=os.path.join(output_dir, 'diffusion_animation.gif'), 
-                            fps=1)
+    # Create animated GIF of diffusion (optional)
+    if not args.no_gif:
+        print("\nCreating animated GIF of diffusion...")
+        sim.create_diffusion_gif(results, 
+                                save_path=os.path.join(output_dir, 'diffusion_animation.gif'), 
+                                fps=1)
+    else:
+        print("\nSkipping GIF generation (--no-gif flag set)")
     
     print("\n" + "="*60)
     print("SIMULATION SUMMARY")
@@ -113,7 +125,8 @@ Examples:
     print(f"  - network_diffusion_initial_reputation.png")
     print(f"  - network_diffusion_message_diffusion.png")
     print(f"  - metrics.png")
-    print(f"  - diffusion_animation.gif")
+    if not args.no_gif:
+        print(f"  - diffusion_animation.gif")
     print("="*60)
 
 

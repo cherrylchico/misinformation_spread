@@ -322,11 +322,11 @@ class Simulation:
             # Calculate average reputation after this round
             avg_reputation = np.mean([agent.reputation for agent in self.agents])
             
-            print(f"Round {round_num + 1}: Reach={result['reach']:.2%}, "
-                  f"Forwarding={result['forwarding_rate']:.2%}, "
-                  f"Misinfo={result['misinformation_contamination']:.2%}, "
-                  f"Truth={result['message'].truth}, "
-                  f"Avg Reputation={avg_reputation:.4f}")
+            #             print(f"Round {round_num + 1}: Reach={result['reach']:.2%}, "
+            #                   f"Forwarding={result['forwarding_rate']:.2%}, "
+            #                   f"Misinfo={result['misinformation_contamination']:.2%}, "
+            #                   f"Truth={result['message'].truth}, "
+            #                   f"Avg Reputation={avg_reputation:.4f}")
         return results
     
     def visualize_network(self, round_result=None, save_path=None):
