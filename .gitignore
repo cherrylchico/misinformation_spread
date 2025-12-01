@@ -20,7 +20,8 @@ venv/
 .venv/
 
 output/
-
+figures/    
+results/
 
 # Keep README files
 !figures/README.md

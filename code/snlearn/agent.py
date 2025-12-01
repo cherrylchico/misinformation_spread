@@ -125,8 +125,8 @@ class Agent:
             if acted_on_truth == 1:
                 # Calculate logarithmic gain factor
                 # Use max(reputation, 0) to avoid issues with negative reputation
-                log_factor = 1 + np.log1p(max(self.reputation, 0))  # log1p(x) = log(1 + x)
-                effective_reward = self.reputation_reward_strength / log_factor
+                log_factor = 1 / (1 + np.log1p(max(self.reputation, 0)))  # log1p(x) = log(1 + x)
+                effective_reward = self.reputation_reward_strength * log_factor
                 self.reputation += effective_reward
             
             # Penalties remain linear to maintain incentive to avoid misinformation

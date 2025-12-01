@@ -34,7 +34,8 @@ Use the main simulation script to run experiments. You can specify different age
 ```sh
 uv run python code/run_simulation.py \
   --config-sim code/config/config_sim_general.json \
-  --config-agent code/config/config_sim_agent.json
+  --config-agent code/config/config_sim_agent.json \
+  --no-gif
 ```
 
 ### With Influencers
@@ -93,3 +94,41 @@ uv run python code/run_simulation.py \
 ```
 
 The `--seed` option sets the random seed, ensuring identical results across runs with the same parameters.
+
+## 6. Batch Simulations & Analysis
+
+To run multiple simulations, vary parameters, and analyze results statistically, use the batch simulation system.
+
+### Running Batch Simulations
+Use `code/batch_simulation.py` to run experiments.
+
+**Example: Varying Probability of Truth**
+```sh
+uv run python code/batch_simulation.py \
+  --num-runs 50 \
+  --vary message.prob_truth \
+  --values 0.1 0.3 0.5 0.7 0.9 \
+  --config-sim code/config/config_sim_general.json \
+  --config-agent code/config/config_sim_agent.json \
+  --output results/prob_truth_experiment.csv
+```
+
+**Key Arguments:**
+- `--num-runs`: Number of simulations per parameter value
+- `--vary`: Parameter to vary (e.g., `message.prob_truth`, `num_bots`, `num_influencers`)
+- `--values`: List of values to test
+- `--output`: Output CSV file path
+
+### Analyzing Results
+Use `code/analyze_results.py` to generate plots and statistics.
+
+```sh
+uv run python code/analyze_results.py \
+  --input results/prob_truth_experiment.csv \
+  --output figures/prob_truth_analysis.png
+```
+
+This will generate a plot with error bars (95% confidence intervals) showing how metrics change with the varied parameter.
+
+### New Parameters
+- `truth_revelation_prob`: Probability that the truth of a message is revealed after each round (default: 1.0). Can be set in `config_sim_general.json` under `message`.

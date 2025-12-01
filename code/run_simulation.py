@@ -123,6 +123,7 @@ Examples:
     print(f"Generated files:")
     print(f"  - network_diffusion_political_bias.png")
     print(f"  - network_diffusion_initial_reputation.png")
+    print(f"  - network_diffusion_agent_types.png")
     print(f"  - network_diffusion_message_diffusion.png")
     print(f"  - metrics.png")
     if not args.no_gif:

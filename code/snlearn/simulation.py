@@ -86,11 +86,12 @@ class Simulation:
         # Network parameters
         self.network_pickle_file = self.config_sim.get('network_pickle_file', None)
         
+        message_config = self.config_sim.get("message", {})
         # Message parameters
-        message_config = self.config_sim.get('message', {})
         self.message_left_bias = message_config.get('left_bias', 0.5)
         self.message_right_bias = message_config.get('right_bias', 0.5)
         self.prob_truth = message_config.get('prob_truth', 0.5)
+        self.truth_revelation_prob = message_config.get('truth_revelation_prob', 1.0)
         
         # Simulation parameters
         self.num_rounds = self.config_sim.get('num_rounds', 10)
@@ -172,8 +173,16 @@ class Simulation:
         agents = []
         influencer_set = set(self.influencers)
         
-        # Determine which nodes are bots (last num_bots nodes)
-        bot_nodes = set(range(self.num_agents - self.num_bots, self.num_agents))
+        # Determine which nodes are bots (randomly selected from non-influencers)
+        non_influencers = [i for i in range(self.num_agents) if i not in influencer_set]
+        
+        # Use seed for reproducibility if set globally
+        # Note: np.random.seed should have been called before this if reproducibility is desired
+        if len(non_influencers) >= self.num_bots:
+            bot_nodes = set(np.random.choice(non_influencers, self.num_bots, replace=False))
+        else:
+            # Fallback if too many bots requested (shouldn't happen with validation)
+            bot_nodes = set(non_influencers)
         
         for i in range(self.num_agents):
             if i in influencer_set and self.influencer_config:
@@ -273,10 +282,18 @@ class Simulation:
         
         # 4. (Already processed during BFS diffusion)
         
-        # 5. Reveal truth and update reputations
-        message.reveal_truth()
-        for agent_id in received:
-            self.agents[agent_id].update_reputation(message, store=True)
+        # 5. Reveal truth and update reputations (probabilistic)
+        # Truth is only revealed with probability truth_revelation_prob
+        if np.random.random() < self.truth_revelation_prob:
+            message.reveal_truth()
+            for agent_id in received:
+                self.agents[agent_id].update_reputation(message, store=True)
+        else:
+            # If truth is not revealed, reputations don't change based on truth
+            # But we still store current reputation for history tracking
+            for agent_id in received:
+                # Just store current reputation without update
+                self.agents[agent_id].reputation_history.append(self.agents[agent_id].reputation)
         
         # 6. Calculate metrics
         reach = len(received) / self.num_agents
@@ -372,6 +389,47 @@ class Simulation:
         )
         plt.close()
         
+        # 3. Agent Type visualization (NEW)
+        # 0=Regular, 1=Influencer, 2=Bot
+        type_colors = {}
+        influencer_set = set(self.influencers)
+        # Re-identify bots based on agent type
+        bot_set = {i for i, agent in enumerate(self.agents) if agent.type == 'bot'}
+        
+        for i in range(self.num_agents):
+            if i in influencer_set:
+                type_colors[i] = 1  # Influencer
+            elif i in bot_set:
+                type_colors[i] = 2  # Bot
+            else:
+                type_colors[i] = 0  # Regular
+        
+        type_save_path = f"{base_path}_agent_types.png" if base_path else None
+        
+        type_legend = {
+            0: 'Regular Agent',
+            1: 'Influencer',
+            2: 'Bot'
+        }
+        
+        # Custom colormap: Blue (Regular), Gold (Influencer), Red (Bot)
+        from matplotlib.colors import ListedColormap
+        type_cmap = ListedColormap(['#1f77b4', '#ffd700', '#d62728'])
+        
+        draw_network(
+            self.network,
+            seed=self.network.seed,
+            save_path=type_save_path,
+            title='Agent Types',
+            figsize=(14, 10),
+            color_by='custom',
+            node_colors_dict=type_colors,
+            colormap=type_cmap,
+            legend_labels=type_legend,
+            label_nodes=self.initial_senders
+        )
+        plt.close()
+        
         # 3. Message Diffusion visualization (if round_result provided)
         if round_result:
             message = round_result['message']
@@ -433,26 +491,36 @@ class Simulation:
                 node_colors = []
                 node_sizes = []
                 influencer_set = set(self.influencers)
+                bot_set = {i for i, agent in enumerate(self.agents) if agent.type == 'bot'}
                 
                 for i in range(self.num_agents):
                     if i in influencer_set:
-                        # High_reputation agents (influencers) - larger
+                        # Influencer agents - Gold/Orange
                         base_size = 500
                         if i in forwarded:
-                            node_colors.append('darkred')  # Forwarded
+                            node_colors.append('#b8860b')  # Dark Goldenrod (Forwarded)
                         elif i in received:
-                            node_colors.append('darkorange')  # Received but didn't forward
+                            node_colors.append('#ffd700')  # Gold (Received)
                         else:
-                            node_colors.append('lightblue')  # Didn't receive
+                            node_colors.append('#fffacd')  # Lemon Chiffon (Idle)
+                    elif i in bot_set:
+                        # Bot agents - Red/Pink
+                        base_size = 400
+                        if i in forwarded:
+                            node_colors.append('#8b0000')  # Dark Red (Forwarded)
+                        elif i in received:
+                            node_colors.append('#ff0000')  # Red (Received)
+                        else:
+                            node_colors.append('#ffcccc')  # Light Red (Idle)
                     else:
-                        # Low_reputation agents (regular) - smaller
+                        # Regular agents - Blue/Gray
                         base_size = 300
                         if i in forwarded:
-                            node_colors.append('red')  # Forwarded
+                            node_colors.append('#00008b')  # Dark Blue (Forwarded)
                         elif i in received:
-                            node_colors.append('orange')  # Received but didn't forward
+                            node_colors.append('#4169e1')  # Royal Blue (Received)
                         else:
-                            node_colors.append('lightgray')  # Didn't receive
+                            node_colors.append('#d3d3d3')  # Light Gray (Idle)
                     
                     node_sizes.append(base_size)
                 
